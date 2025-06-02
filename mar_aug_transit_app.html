@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monthly Planetary Ephemeris Plot 2025</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column; /* Allow content to stack vertically */
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f4f8; /* Light blue-gray background */
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 1rem; /* Rounded corners */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            text-align: center;
+            max-width: 800px; /* Increased max-width to accommodate legend */
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .plot-area {
+            display: flex;
+            flex-direction: row; /* Plot and legend side-by-side */
+            justify-content: center;
+            align-items: flex-start; /* Align items to the top */
+            width: 100%;
+            gap: 1.5rem;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+            position: relative; /* Needed for tooltip positioning */
+        }
+        canvas {
+            border: 1px solid #e2e8f0; /* Light border */
+            border-radius: 50%; /* Circular canvas */
+            background-color: #f9fafb; /* Off-white canvas background */
+            width: 100%; /* Make canvas fluid */
+            max-width: 500px; /* Max width for larger screens */
+            height: auto; /* Maintain aspect ratio */
+            display: block;
+            margin: 0 auto;
+        }
+        h3 {
+            color: #2d3748; /* Darker text for heading */
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        p {
+            color: #4a5568; /* Medium text for paragraphs */
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .legend {
+            text-align: left;
+            padding: 1rem;
+            background-color: #f0f4f8;
+            border-radius: 0.75rem;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+            min-width: 150px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .legend-color-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            margin-right: 0.5rem;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        #tooltip {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.95);
+            border: 1px solid #ccc;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #333;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            pointer-events: none; /* Crucial: ensures mouse events pass through to canvas */
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            z-index: 1000; /* Ensure it's on top */
+            white-space: nowrap; /* Prevent text wrapping */
+            transform: translate(-50%, -100%); /* Position above and center horizontally */
+            top: 0; /* Will be set dynamically */
+            left: 0; /* Will be set dynamically */
+        }
+        #tooltip.active {
+            opacity: 1;
+        }
+        select {
+            padding: 0.5rem 1rem;
+            border: 1px solid #cbd5e0;
+            border-radius: 0.5rem;
+            background-color: #ffffff;
+            font-size: 1rem;
+            color: #2d3748;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        select:focus {
+            border-color: #3182ce; /* Blue on focus */
+        }
+        @media (max-width: 640px) {
+            .container {
+                padding: 1rem;
+            }
+            h3 {
+                font-size: 1.5rem;
+            }
+            p {
+                font-size: 0.85rem;
+            }
+            .plot-area {
+                flex-direction: column; /* Stack on small screens */
+                align-items: center;
+            }
+            select {
+                font-size: 0.9rem;
+                padding: 0.4rem 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h3 id="plotTitle">Planetary Ephemeris for March 2025</h3>
+        <label for="monthSelect" class="text-gray-700 text-sm font-medium">Select Month:</label>
+        <select id="monthSelect" class="mb-4">
+            <option value="March">March</option>
+            <option value="April">April</option>
+            <option value="May">May</option>
+            <option value="June">June</option>
+            <option value="July">July</option>
+            <option value="August">August</option>
+        </select>
+        <div class="plot-area">
+            <canvas id="polarPlotCanvas" width="500" height="500"></canvas>
+            <div id="legendContainer" class="legend">
+                <h4>Legend:</h4>
+            </div>
+            <div id="tooltip" class="tooltip"></div>
+        </div>
+        <p>This polar plot visualizes the movement traces of planets for the selected month. Each colored line represents a planet's path.</p>
+        <p>The radial distance from the center indicates the day of the month (1st closest, last day furthest). Aries starts at 0 degrees longitude (right side of the circle), and longitudes increase counter-clockwise. Concentric circles mark every 5th day for easier reference.</p>
+        <p>Hover over a planet's path to see the planet, the date, and the zodiac sign it is in.</p>
+        <p>This plot is made by Deepak Jain and is dedicated to all astrology students.</p>
+    </div>
+
+    <script>
+        // Function to convert DMS (Degrees:Minutes:Seconds) string to decimal degrees
+        function dmsToDecimal(dmsStr) {
+            const parts = dmsStr.split(':');
+            const degrees = parseInt(parts[0]);
+            const minutes = parseInt(parts[1]);
+            const seconds = parseInt(parts[2]);
+            const decimalDegrees = degrees + minutes / 60 + seconds / 3600;
+            return decimalDegrees;
+        }
+
+        // Zodiac sign definitions with their longitude ranges and midpoints
+        const zodiacSigns = [
+            { name: "Aries", range: [0, 30], midLongitude: 15 },
+            { name: "Taurus", range: [30, 60], midLongitude: 45 },
+            { name: "Gemini", range: [60, 90], midLongitude: 75 },
+            { name: "Cancer", range: [90, 120], midLongitude: 105 },
+            { name: "Leo", range: [120, 150], midLongitude: 135 },
+            { name: "Virgo", range: [150, 180], midLongitude: 165 },
+            { name: "Libra", range: [180, 210], midLongitude: 195 },
+            { name: "Scorpio", range: [210, 240], midLongitude: 225 },
+            { name: "Sagittarius", range: [240, 270], midLongitude: 255 },
+            { name: "Capricorn", range: [270, 300], midLongitude: 285 },
+            { name: "Aquarius", range: [300, 330], midLongitude: 315 },
+            { name: "Pisces", range: [330, 360], midLongitude: 345 }
+        ];
+
+        // Nakshatra definitions with their longitude ranges
+        const nakshatras = [
+            { name: "Ashwini", range: [0, 13.333] },
+            { name: "Bharani", range: [13.333, 26.667] },
+            { name: "Krittika", range: [26.667, 40] },
+            { name: "Rohini", range: [40, 53.333] },
+            { name: "Mrigashira", range: [53.333, 66.667] },
+            { name: "Ardra", range: [66.667, 80] },
+            { name: "Punarvasu", range: [80, 93.333] },
+            { name: "Pushya", range: [93.333, 106.667] },
+            { name: "Ashlesha", range: [106.667, 120] },
+            { name: "Magha", range: [120, 133.333] },
+            { name: "Purva Phalguni", range: [133.333, 146.667] },
+            { name: "Uttara Phalguni", range: [146.667, 160] },
+            { name: "Hasta", range: [160, 173.333] },
+            { name: "Chitra", range: [173.333, 186.667] },
+            { name: "Swati", range: [186.667, 200] },
+            { name: "Vishakha", range: [200, 213.333] },
+            { name: "Anuradha", range: [213.333, 226.667] },
+            { name: "Jyeshtha", range: [226.667, 240] },
+            { name: "Mula", range: [240, 253.333] },
+            { name: "Purva Ashadha", range: [253.333, 266.667] },
+            { name: "Uttara Ashadha", range: [266.667, 280] },
+            { name: "Shravana", range: [280, 293.333] },
+            { name: "Dhanishta", range: [293.333, 306.667] },
+            { name: "Shatabhisha", range: [306.667, 320] },
+            { name: "Purva Bhadrapada", range: [320, 333.333] },
+            { name: "Uttara Bhadrapada", range: [333.333, 346.667] },
+            { name: "Revati", range: [346.667, 360] }
+        ];
+
+        // Function to determine the zodiac sign based on longitude
+        function getZodiacSign(longitude) {
+            for (const sign of zodiacSigns) {
+                const [start, end] = sign.range;
+                if (longitude >= start && longitude < end) {
+                    return sign.name;
+                }
+            }
+            // Handle 360 degrees (which is effectively 0 for Aries)
+            if (longitude === 360) {
+                return "Pisces";
+            }
+            return "Unknown";
+        }
+
+        // Function to determine the Nakshatra based on longitude
+        function getNakshatra(longitude) {
+            for (const nakshatra of nakshatras) {
+                const [start, end] = nakshatra.range;
+                if (longitude >= start && longitude < end) {
+                    return nakshatra.name;
+                }
+            }
+            // Handle 360 degrees (which is effectively 0 for Ashwini)
+            if (longitude === 360) {
+                return "Revati";
+            }
+            return "Unknown";
+        }
+
+        // Combined Ephemeris Data for March, April, May, June, July and August 2025
+        const allMonthlyEphemerisData = {
+            "March": {
+                1: { "Sun": "316:27:40", "Moon": "329:43:50", "Mars": "082:58:11", "Mercury": "332:06:09", "Jupiter": "048:05:00", "Venus": "346:37:18", "Saturn": "326:30:12", "Rahu": "334:10:50" },
+                2: { "Sun": "317:27:55", "Moon": "344:31:51", "Mars": "083:02:05", "Mercury": "333:42:40", "Jupiter": "048:09:50", "Venus": "346:38:34", "Saturn": "326:37:33", "Rahu": "334:07:39" },
+                3: { "Sun": "318:28:07", "Moon": "359:18:36", "Mars": "083:06:41", "Mercury": "335:15:11", "Jupiter": "048:14:51", "Venus": "346:37:24", "Saturn": "326:44:54", "Rahu": "334:04:28" },
+                4: { "Sun": "319:28:17", "Moon": "013:57:36", "Mars": "083:11:58", "Mercury": "336:43:09", "Jupiter": "048:20:02", "Venus": "346:33:44", "Saturn": "326:52:16", "Rahu": "334:01:17" },
+                5: { "Sun": "320:28:26", "Moon": "028:23:55", "Mars": "083:17:54", "Mercury": "338:05:59", "Jupiter": "048:25:23", "Venus": "346:27:35", "Saturn": "326:59:38", "Rahu": "333:58:07" },
+                6: { "Sun": "321:28:32", "Moon": "042:34:15", "Mars": "083:24:29", "Mercury": "339:23:06", "Jupiter": "048:30:54", "Venus": "346:18:54", "Saturn": "327:07:01", "Rahu": "333:54:56" },
+                7: { "Sun": "322:28:36", "Moon": "056:27:02", "Mars": "083:31:43", "Mercury": "340:33:56", "Jupiter": "048:36:36", "Venus": "346:07:42", "Saturn": "327:14:24", "Rahu": "333:51:45" },
+                8: { "Sun": "323:28:38", "Moon": "070:01:57", "Mars": "083:39:34", "Mercury": "341:37:58", "Jupiter": "048:42:27", "Venus": "345:53:59", "Saturn": "327:21:48", "Rahu": "333:48:34" },
+                9: { "Sun": "324:28:37", "Moon": "083:19:40", "Mars": "083:48:02", "Mercury": "342:34:44", "Jupiter": "048:48:28", "Venus": "345:37:46", "Saturn": "327:29:12", "Rahu": "333:45:24" },
+                10: { "Sun": "325:28:35", "Moon": "096:21:19", "Mars": "083:57:06", "Mercury": "343:23:46", "Jupiter": "048:54:38", "Venus": "345:19:07", "Saturn": "327:36:36", "Rahu": "333:42:13" },
+                11: { "Sun": "326:28:30", "Moon": "109:08:20", "Mars": "084:06:45", "Mercury": "344:04:44", "Jupiter": "049:00:59", "Venus": "344:58:05", "Saturn": "327:44:00", "Rahu": "333:39:02" },
+                12: { "Sun": "327:28:23", "Moon": "121:42:09", "Mars": "084:16:59", "Mercury": "344:37:20", "Jupiter": "049:07:28", "Venus": "344:34:45", "Saturn": "327:51:24", "Rahu": "333:35:51" },
+                13: { "Sun": "328:28:15", "Moon": "134:04:13", "Mars": "084:27:46", "Mercury": "345:01:22", "Jupiter": "049:14:07", "Venus": "344:09:13", "Saturn": "327:58:49", "Rahu": "333:32:40" },
+                14: { "Sun": "329:28:04", "Moon": "146:15:60", "Mars": "084:39:06", "Mercury": "345:16:43", "Jupiter": "049:20:55", "Venus": "343:41:37", "Saturn": "328:06:13", "Rahu": "333:29:30" },
+                15: { "Sun": "330:27:51", "Moon": "158:19:05", "Mars": "084:50:58", "Mercury": "345:23:24", "Jupiter": "049:27:52", "Venus": "343:12:05", "Saturn": "328:13:37", "Rahu": "333:26:19" },
+                16: { "Sun": "331:27:36", "Moon": "170:15:14", "Mars": "085:03:21", "Mercury": "345:21:32", "Jupiter": "049:34:58", "Venus": "342:40:46", "Saturn": "328:21:01", "Rahu": "333:23:08" },
+                17: { "Sun": "332:27:20", "Moon": "182:06:35", "Mars": "085:16:15", "Mercury": "345:11:20", "Jupiter": "049:42:13", "Venus": "342:07:51", "Saturn": "328:28:25", "Rahu": "333:19:57" },
+                18: { "Sun": "333:27:02", "Moon": "193:55:39", "Mars": "085:29:40", "Mercury": "344:53:13", "Jupiter": "049:49:36", "Venus": "341:33:34", "Saturn": "328:35:49", "Rahu": "333:16:47" },
+                19: { "Sun": "334:26:41", "Moon": "205:45:27", "Mars": "085:43:33", "Mercury": "344:27:42", "Jupiter": "049:57:08", "Venus": "340:58:05", "Saturn": "328:43:12", "Rahu": "333:13:36" },
+                20: { "Sun": "335:26:19", "Moon": "217:39:30", "Mars": "085:57:56", "Mercury": "343:55:24", "Jupiter": "050:04:49", "Venus": "340:21:40", "Saturn": "328:50:34", "Rahu": "333:10:25" },
+                21: { "Sun": "336:25:56", "Moon": "229:41:44", "Mars": "086:12:47", "Mercury": "343:17:09", "Jupiter": "050:12:38", "Venus": "339:44:33", "Saturn": "328:57:57", "Rahu": "333:07:14" },
+                22: { "Sun": "337:25:30", "Moon": "241:56:22", "Mars": "086:28:05", "Mercury": "342:33:51", "Jupiter": "050:20:35", "Venus": "339:06:59", "Saturn": "329:05:18", "Rahu": "333:04:04" },
+                23: { "Sun": "338:25:03", "Moon": "254:27:46", "Mars": "086:43:50", "Mercury": "341:46:28", "Jupiter": "050:28:40", "Venus": "338:29:12", "Saturn": "329:12:40", "Rahu": "333:00:53" },
+                24: { "Sun": "339:24:34", "Moon": "267:19:60", "Mars": "087:00:02", "Mercury": "340:56:07", "Jupiter": "050:36:54", "Venus": "337:51:28", "Saturn": "329:19:60", "Rahu": "332:57:42" },
+                25: { "Sun": "340:24:03", "Moon": "280:36:28", "Mars": "087:16:40", "Mercury": "340:03:54", "Jupiter": "050:45:15", "Venus": "337:14:03", "Saturn": "329:27:20", "Rahu": "332:54:31" },
+                26: { "Sun": "341:23:31", "Moon": "294:19:20", "Mars": "087:33:44", "Mercury": "339:10:57", "Jupiter": "050:53:45", "Venus": "336:37:11", "Saturn": "329:34:39", "Rahu": "332:51:20" },
+                27: { "Sun": "342:22:56", "Moon": "308:28:47", "Mars": "087:51:12", "Mercury": "338:18:20", "Jupiter": "051:02:22", "Venus": "336:01:07", "Saturn": "330:03:45", "Rahu": "332:48:10" },
+                28: { "Sun": "343:22:20", "Moon": "323:02:38", "Mars": "088:09:05", "Mercury": "337:27:06", "Jupiter": "051:11:07", "Venus": "335:26:03", "Saturn": "329:49:14", "Rahu": "332:44:59" },
+                29: { "Sun": "344:21:42", "Moon": "337:55:57", "Mars": "088:27:22", "Mercury": "336:38:11", "Jupiter": "051:19:59", "Venus": "334:52:14", "Saturn": "330:03:45", "Rahu": "332:41:48" },
+                30: { "Sun": "345:21:02", "Moon": "353:01:21", "Mars": "088:46:03", "Mercury": "335:52:25", "Jupiter": "051:28:59", "Venus": "334:19:51", "Saturn": "330:03:45", "Rahu": "332:38:37" },
+                31: { "Sun": "346:20:20", "Moon": "008:09:47", "Mars": "089:05:06", "Mercury": "335:10:29", "Jupiter": "051:38:06", "Venus": "333:49:05", "Saturn": "330:10:58", "Rahu": "332:35:27" }
+            },
+            "April": {
+                1: { "Sun": "347:19:36", "Moon": "023:11:55", "Mars": "089:24:32", "Mercury": "334:32:60", "Jupiter": "051:47:20", "Venus": "333:20:05", "Saturn": "330:18:11", "Rahu": "332:32:16" },
+                2: { "Sun": "348:18:49", "Moon": "037:59:26", "Mars": "089:44:20", "Mercury": "334:00:23", "Jupiter": "051:56:42", "Venus": "332:53:00", "Saturn": "330:25:22", "Rahu": "332:29:05" },
+                3: { "Sun": "349:18:00", "Moon": "052:26:14", "Mars": "090:04:30", "Mercury": "333:32:59", "Jupiter": "052:06:10", "Venus": "332:27:58", "Saturn": "330:32:32", "Rahu": "332:25:54" },
+                4: { "Sun": "350:17:09", "Moon": "066:28:50", "Mars": "090:24:60", "Mercury": "333:11:01", "Jupiter": "052:15:45", "Venus": "332:05:05", "Saturn": "330:39:40", "Rahu": "332:22:44" },
+                5: { "Sun": "351:16:16", "Moon": "080:06:20", "Mars": "090:45:50", "Mercury": "332:54:36", "Jupiter": "052:25:27", "Venus": "331:44:27", "Saturn": "330:46:47", "Rahu": "332:19:33" },
+                6: { "Sun": "352:15:20", "Moon": "093:19:53", "Mars": "091:07:00", "Mercury": "332:43:46", "Jupiter": "052:35:15", "Venus": "331:26:09", "Saturn": "330:53:52", "Rahu": "332:16:22" },
+                7: { "Sun": "353:14:22", "Moon": "106:12:00", "Mars": "091:28:30", "Mercury": "332:38:30", "Jupiter": "052:45:10", "Venus": "331:10:13", "Saturn": "331:00:56", "Rahu": "332:13:11" },
+                8: { "Sun": "354:13:21", "Moon": "118:45:56", "Mars": "091:50:18", "Mercury": "332:38:43", "Jupiter": "052:55:11", "Venus": "330:56:42", "Saturn": "331:07:58", "Rahu": "332:10:00" },
+                9: { "Sun": "355:12:19", "Moon": "131:05:11", "Mars": "092:12:25", "Mercury": "332:44:17", "Jupiter": "053:05:18", "Venus": "330:45:38", "Saturn": "331:14:58", "Rahu": "332:06:50" },
+                10: { "Sun": "356:11:14", "Moon": "143:13:05", "Mars": "092:34:50", "Mercury": "332:55:02", "Jupiter": "053:15:32", "Venus": "330:37:01", "Saturn": "331:21:56", "Rahu": "332:03:39" },
+                11: { "Sun": "357:10:07", "Moon": "155:12:43", "Mars": "092:57:32", "Mercury": "333:10:47", "Jupiter": "053:25:51", "Venus": "330:30:51", "Saturn": "331:28:52", "Rahu": "332:00:28" },
+                12: { "Sun": "358:08:58", "Moon": "167:06:44", "Mars": "093:20:31", "Mercury": "333:31:22", "Jupiter": "053:36:17", "Venus": "330:27:08", "Saturn": "331:35:47", "Rahu": "331:57:17" },
+                13: { "Sun": "359:07:47", "Moon": "178:57:28", "Mars": "093:43:46", "Mercury": "333:56:33", "Jupiter": "053:46:48", "Venus": "330:25:50", "Saturn": "331:42:39", "Rahu": "331:54:07" },
+                14: { "Sun": "000:06:33", "Moon": "190:46:58", "Mars": "094:07:18", "Mercury": "334:26:09", "Jupiter": "053:57:24", "Venus": "330:26:56", "Saturn": "331:49:30", "Rahu": "331:50:56" },
+                15: { "Sun": "001:05:18", "Moon": "202:37:15", "Mars": "094:31:06", "Mercury": "334:59:57", "Jupiter": "054:08:07", "Venus": "330:30:22", "Saturn": "331:56:18", "Rahu": "331:47:45" },
+                16: { "Sun": "002:04:01", "Moon": "214:30:18", "Mars": "094:55:10", "Mercury": "335:37:45", "Jupiter": "054:18:55", "Venus": "330:36:06", "Saturn": "332:03:04", "Rahu": "331:44:34" },
+                17: { "Sun": "003:02:43", "Moon": "226:28:25", "Mars": "095:19:29", "Mercury": "336:19:23", "Jupiter": "054:29:48", "Venus": "330:44:06", "Saturn": "332:09:48", "Rahu": "331:41:23" },
+                18: { "Sun": "004:01:22", "Moon": "238:34:11", "Mars": "095:44:03", "Mercury": "337:04:39", "Jupiter": "054:40:47", "Venus": "330:54:17", "Saturn": "332:16:30", "Rahu": "331:38:13" },
+                19: { "Sun": "004:59:60", "Moon": "250:50:36", "Mars": "096:08:51", "Mercury": "337:53:22", "Jupiter": "054:51:51", "Venus": "331:06:36", "Saturn": "332:23:09", "Rahu": "331:35:02" },
+                20: { "Sun": "005:58:36", "Moon": "263:21:02", "Mars": "096:33:54", "Mercury": "338:45:23", "Jupiter": "055:02:60", "Venus": "331:21:00", "Saturn": "332:29:46", "Rahu": "331:31:51" },
+                21: { "Sun": "006:57:10", "Moon": "276:09:08", "Mars": "096:59:11", "Mercury": "339:40:34", "Jupiter": "055:14:14", "Venus": "331:37:25", "Saturn": "332:36:21", "Rahu": "331:28:40" },
+                22: { "Sun": "007:55:43", "Moon": "289:18:24", "Mars": "097:24:42", "Mercury": "340:38:44", "Jupiter": "055:25:33", "Venus": "331:55:46", "Saturn": "332:42:53", "Rahu": "331:25:30" },
+                23: { "Sun": "008:54:14", "Moon": "302:51:51", "Mars": "097:50:27", "Mercury": "341:39:48", "Jupiter": "055:36:57", "Venus": "332:16:01", "Saturn": "332:49:22", "Rahu": "331:22:19" },
+                24: { "Sun": "009:52:44", "Moon": "316:51:20", "Mars": "098:16:25", "Mercury": "342:43:37", "Jupiter": "055:48:26", "Venus": "332:38:04", "Saturn": "332:55:48", "Rahu": "331:19:08" },
+                25: { "Sun": "010:51:12", "Moon": "331:16:44", "Mars": "098:42:36", "Mercury": "343:50:05", "Jupiter": "055:59:59", "Venus": "333:01:52", "Saturn": "333:02:12", "Rahu": "331:15:57" },
+                26: { "Sun": "011:49:38", "Moon": "346:05:21", "Mars": "099:09:00", "Mercury": "344:59:06", "Jupiter": "056:11:37", "Venus": "333:27:20", "Saturn": "333:08:33", "Rahu": "331:12:47" },
+                27: { "Sun": "012:48:03", "Moon": "001:11:24", "Mars": "099:35:37", "Mercury": "346:10:34", "Jupiter": "056:23:20", "Venus": "333:54:26", "Saturn": "333:14:52", "Rahu": "331:09:36" },
+                28: { "Sun": "013:46:26", "Moon": "016:26:21", "Mars": "100:02:26", "Mercury": "347:24:25", "Jupiter": "056:35:07", "Venus": "334:23:06", "Saturn": "333:21:07", "Rahu": "331:06:25" },
+                29: { "Sun": "014:44:47", "Moon": "031:39:52", "Mars": "100:29:28", "Mercury": "348:40:35", "Jupiter": "056:46:58", "Venus": "334:53:14", "Saturn": "333:27:19", "Rahu": "331:03:14" },
+                30: { "Sun": "015:43:06", "Moon": "046:41:34", "Mars": "100:56:42", "Mercury": "349:58:59", "Jupiter": "056:58:54", "Venus": "335:24:49", "Saturn": "333:33:28", "Rahu": "331:00:03" }
+            },
+            "May": {
+                1: { "Sun": "016:41:24", "Moon": "061:22:42", "Mars": "101:24:07", "Mercury": "351:19:35", "Jupiter": "057:10:53", "Venus": "335:57:47", "Saturn": "333:39:34", "Rahu": "330:56:53" },
+                2: { "Sun": "017:39:39", "Moon": "075:37:27", "Mars": "101:51:44", "Mercury": "352:42:19", "Jupiter": "057:22:57", "Venus": "336:32:04", "Saturn": "333:45:37", "Rahu": "330:53:42" },
+                3: { "Sun": "018:37:52", "Moon": "089:23:18", "Mars": "102:19:32", "Mercury": "354:07:09", "Jupiter": "057:35:04", "Venus": "337:07:37", "Saturn": "333:51:36", "Rahu": "330:50:31" },
+                4: { "Sun": "019:36:03", "Moon": "102:40:45", "Mars": "102:47:31", "Mercury": "355:34:03", "Jupiter": "057:47:16", "Venus": "337:44:24", "Saturn": "333:57:33", "Rahu": "330:47:20" },
+                5: { "Sun": "020:34:13", "Moon": "115:32:29", "Mars": "103:15:40", "Mercury": "357:02:59", "Jupiter": "057:59:31", "Venus": "338:22:22", "Saturn": "334:03:25", "Rahu": "330:44:10" },
+                6: { "Sun": "021:32:20", "Moon": "128:02:35", "Mars": "103:44:00", "Mercury": "358:33:56", "Jupiter": "058:11:49", "Venus": "339:01:28", "Saturn": "334:09:15", "Rahu": "330:40:59" },
+                7: { "Sun": "022:30:25", "Moon": "140:15:43", "Mars": "104:12:30", "Mercury": "000:06:54", "Jupiter": "058:24:11", "Venus": "339:41:39", "Saturn": "334:15:01", "Rahu": "330:37:48" },
+                8: { "Sun": "023:28:29", "Moon": "152:16:38", "Mars": "104:41:10", "Mercury": "001:41:51", "Jupiter": "058:36:37", "Venus": "340:22:54", "Saturn": "334:20:43", "Rahu": "330:34:37" },
+                9: { "Sun": "024:26:30", "Moon": "164:09:45", "Mars": "105:09:60", "Mercury": "003:18:47", "Jupiter": "058:49:06", "Venus": "341:05:09", "Saturn": "334:26:22", "Rahu": "330:31:27" },
+                10: { "Sun": "025:24:30", "Moon": "175:58:54", "Mars": "105:38:59", "Mercury": "004:57:42", "Jupiter": "059:01:38", "Venus": "341:48:23", "Saturn": "334:31:57", "Rahu": "330:28:16" },
+                11: { "Sun": "026:22:28", "Moon": "187:47:21", "Mars": "106:08:07", "Mercury": "006:38:35", "Jupiter": "059:14:13", "Venus": "342:32:33", "Saturn": "334:37:28", "Rahu": "330:25:05" },
+                12: { "Sun": "027:20:25", "Moon": "199:37:40", "Mars": "106:37:25", "Mercury": "008:21:28", "Jupiter": "059:26:52", "Venus": "343:17:37", "Saturn": "334:42:56", "Rahu": "330:21:54" },
+                13: { "Sun": "028:18:20", "Moon": "211:31:51", "Mars": "107:06:51", "Mercury": "010:06:19", "Jupiter": "059:39:33", "Venus": "344:03:33", "Saturn": "334:48:20", "Rahu": "330:18:43" },
+                14: { "Sun": "029:16:13", "Moon": "223:31:29", "Mars": "107:36:27", "Mercury": "011:53:10", "Jupiter": "059:52:18", "Venus": "344:50:19", "Saturn": "334:53:40", "Rahu": "330:15:33" },
+                15: { "Sun": "030:14:05", "Moon": "235:37:57", "Mars": "108:06:11", "Mercury": "013:41:60", "Jupiter": "060:05:05", "Venus": "345:37:53", "Saturn": "334:58:56", "Rahu": "330:12:22" },
+                16: { "Sun": "031:11:56", "Moon": "247:52:39", "Mars": "108:36:04", "Mercury": "015:32:49", "Jupiter": "060:17:55", "Venus": "346:26:15", "Saturn": "335:04:08", "Rahu": "330:09:11" },
+                17: { "Sun": "032:09:45", "Moon": "260:17:09", "Mars": "109:06:05", "Mercury": "017:25:37", "Jupiter": "060:30:48", "Venus": "347:15:20", "Saturn": "335:09:16", "Rahu": "330:06:00" },
+                18: { "Sun": "033:07:33", "Moon": "272:53:28", "Mars": "109:36:14", "Mercury": "019:20:23", "Jupiter": "060:43:43", "Venus": "348:05:09", "Saturn": "335:14:20", "Rahu": "330:02:50" },
+                19: { "Sun": "034:05:20", "Moon": "285:43:59", "Mars": "110:06:31", "Mercury": "021:17:07", "Jupiter": "060:56:41", "Venus": "348:55:39", "Saturn": "335:19:20", "Rahu": "329:59:39" },
+                20: { "Sun": "035:03:05", "Moon": "298:51:26", "Mars": "110:36:57", "Mercury": "023:15:45", "Jupiter": "061:09:42", "Venus": "349:46:49", "Saturn": "335:24:16", "Rahu": "329:56:28" },
+                21: { "Sun": "036:00:50", "Moon": "312:18:33", "Mars": "111:07:31", "Mercury": "025:16:15", "Jupiter": "061:22:45", "Venus": "350:38:38", "Saturn": "335:29:07", "Rahu": "329:53:17" },
+                22: { "Sun": "036:58:34", "Moon": "326:07:35", "Mars": "111:38:12", "Mercury": "027:18:34", "Jupiter": "061:35:50", "Venus": "351:31:03", "Saturn": "335:33:55", "Rahu": "329:50:07" },
+                23: { "Sun": "037:56:16", "Moon": "340:19:40", "Mars": "112:09:01", "Mercury": "029:22:36", "Jupiter": "061:48:58", "Venus": "352:24:03", "Saturn": "335:38:37", "Rahu": "329:46:56" },
+                24: { "Sun": "038:53:58", "Moon": "354:53:53", "Mars": "112:39:59", "Mercury": "031:28:16", "Jupiter": "062:02:08", "Venus": "353:17:38", "Saturn": "335:43:16", "Rahu": "329:43:45" },
+                25: { "Sun": "039:51:39", "Moon": "009:46:40", "Mars": "113:11:03", "Mercury": "033:35:25", "Jupiter": "062:15:20", "Venus": "354:11:45", "Saturn": "335:47:49", "Rahu": "329:40:34" },
+                26: { "Sun": "040:49:18", "Moon": "024:51:30", "Mars": "113:42:16", "Mercury": "035:43:55", "Jupiter": "062:28:35", "Venus": "355:06:23", "Saturn": "335:52:19", "Rahu": "329:37:23" },
+                27: { "Sun": "041:46:56", "Moon": "039:59:21", "Mars": "114:13:35", "Mercury": "037:53:34", "Jupiter": "062:41:51", "Venus": "356:01:31", "Saturn": "335:56:43", "Rahu": "329:34:13" },
+                28: { "Sun": "042:44:34", "Moon": "055:00:03", "Mars": "114:45:02", "Mercury": "040:04:11", "Jupiter": "062:55:09", "Venus": "356:57:09", "Saturn": "336:01:03", "Rahu": "329:31:02" },
+                29: { "Sun": "043:42:10", "Moon": "069:43:59", "Mars": "115:16:37", "Mercury": "042:15:32", "Jupiter": "063:08:29", "Venus": "357:53:14", "Saturn": "336:05:19", "Rahu": "329:27:51" },
+                30: { "Sun": "044:39:44", "Moon": "084:03:50", "Mars": "115:48:18", "Mercury": "044:27:21", "Jupiter": "063:21:51", "Venus": "358:49:46", "Saturn": "336:09:29", "Rahu": "329:24:40" },
+                31: { "Sun": "045:37:18", "Moon": "097:55:26", "Mars": "116:20:06", "Mercury": "046:39:24", "Jupiter": "063:35:14", "Venus": "359:46:43", "Saturn": "336:13:35", "Rahu": "329:21:30" }
+            },
+            "June": {
+                1: { "Sun": "046:34:50", "Moon": "111:17:54", "Mars": "116:52:01", "Mercury": "048:51:23", "Jupiter": "063:48:39", "Venus": "000:44:06", "Saturn": "336:17:35", "Rahu": "329:18:19" },
+                2: { "Sun": "047:32:21", "Moon": "124:13:06", "Mars": "117:24:03", "Mercury": "051:03:03", "Jupiter": "064:02:05", "Venus": "001:41:53", "Saturn": "336:21:31", "Rahu": "329:15:08" },
+                3: { "Sun": "048:29:50", "Moon": "136:44:50", "Mars": "117:56:11", "Mercury": "053:14:06", "Jupiter": "064:15:33", "Venus": "002:40:03", "Saturn": "336:25:22", "Rahu": "329:11:57" },
+                4: { "Sun": "049:27:18", "Moon": "148:57:58", "Mars": "118:28:26", "Mercury": "055:24:17", "Jupiter": "064:29:02", "Venus": "003:38:36", "Saturn": "336:29:08", "Rahu": "329:08:46" },
+                5: { "Sun": "050:24:45", "Moon": "160:57:48", "Mars": "119:00:46", "Mercury": "057:33:22", "Jupiter": "064:42:33", "Venus": "004:37:31", "Saturn": "336:32:49", "Rahu": "329:05:36" },
+                6: { "Sun": "051:22:11", "Moon": "172:49:35", "Mars": "119:33:13", "Mercury": "059:41:05", "Jupiter": "064:56:04", "Venus": "005:36:47", "Saturn": "336:36:24", "Rahu": "329:02:25" },
+                7: { "Sun": "052:19:36", "Moon": "184:38:06", "Mars": "120:05:46", "Mercury": "061:47:17", "Jupiter": "065:09:37", "Venus": "006:36:24", "Saturn": "336:39:55", "Rahu": "328:59:14" },
+                8: { "Sun": "053:16:59", "Moon": "196:27:30", "Mars": "120:38:25", "Mercury": "063:51:44", "Jupiter": "065:23:11", "Venus": "007:36:21", "Saturn": "336:43:20", "Rahu": "328:56:03" },
+                9: { "Sun": "054:14:22", "Moon": "208:21:10", "Mars": "121:11:10", "Mercury": "065:54:18", "Jupiter": "065:36:46", "Venus": "008:36:38", "Saturn": "336:46:41", "Rahu": "328:52:53" },
+                10: { "Sun": "055:11:43", "Moon": "220:21:35", "Mars": "121:44:00", "Mercury": "067:54:52", "Jupiter": "065:50:21", "Venus": "009:37:13", "Saturn": "336:49:56", "Rahu": "328:49:42" },
+                11: { "Sun": "056:09:04", "Moon": "232:30:31", "Mars": "122:16:56", "Mercury": "069:53:19", "Jupiter": "066:03:58", "Venus": "010:38:07", "Saturn": "336:53:05", "Rahu": "328:46:31" },
+                12: { "Sun": "057:06:24", "Moon": "244:48:58", "Mars": "122:49:58", "Mercury": "071:49:33", "Jupiter": "066:17:35", "Venus": "011:39:19", "Saturn": "336:56:10", "Rahu": "328:43:20" },
+                13: { "Sun": "058:03:44", "Moon": "257:17:33", "Mars": "123:23:06", "Mercury": "073:43:32", "Jupiter": "066:31:13", "Venus": "012:40:48", "Saturn": "336:59:09", "Rahu": "328:40:10" },
+                14: { "Sun": "059:01:02", "Moon": "269:56:38", "Mars": "123:56:19", "Mercury": "075:35:11", "Jupiter": "066:44:52", "Venus": "013:42:34", "Saturn": "337:02:02", "Rahu": "328:36:59" },
+                15: { "Sun": "059:58:21", "Moon": "282:46:44", "Mars": "124:29:37", "Mercury": "077:24:28", "Jupiter": "066:58:31", "Venus": "014:44:37", "Saturn": "337:04:50", "Rahu": "328:33:48" },
+                16: { "Sun": "060:55:38", "Moon": "295:48:37", "Mars": "125:03:01", "Mercury": "079:11:21", "Jupiter": "067:12:11", "Venus": "015:46:55", "Saturn": "337:07:33", "Rahu": "328:30:37" },
+                17: { "Sun": "061:52:56", "Moon": "309:03:31", "Mars": "125:36:30", "Mercury": "080:55:50", "Jupiter": "067:25:52", "Venus": "016:49:30", "Saturn": "337:10:10", "Rahu": "328:27:26" },
+                18: { "Sun": "062:50:13", "Moon": "322:32:57", "Mars": "126:10:05", "Mercury": "082:37:53", "Jupiter": "067:39:33", "Venus": "017:52:19", "Saturn": "337:12:42", "Rahu": "328:24:16" },
+                19: { "Sun": "063:47:30", "Moon": "336:18:26", "Mars": "126:43:46", "Mercury": "084:17:29", "Jupiter": "067:53:14", "Venus": "018:55:22", "Saturn": "337:15:08", "Rahu": "328:21:05" },
+                20: { "Sun": "064:44:46", "Moon": "350:20:57", "Mars": "127:17:31", "Mercury": "085:54:38", "Jupiter": "067:53:14", "Venus": "019:58:40", "Saturn": "337:17:28", "Rahu": "328:17:54" },
+                21: { "Sun": "065:42:03", "Moon": "004:40:18", "Mars": "127:51:22", "Mercury": "087:29:19", "Jupiter": "068:20:38", "Venus": "021:02:12", "Saturn": "337:19:43", "Rahu": "328:14:43" },
+                22: { "Sun": "066:39:19", "Moon": "019:14:27", "Mars": "128:25:19", "Mercury": "089:01:30", "Jupiter": "068:34:20", "Venus": "022:05:57", "Saturn": "337:21:51", "Rahu": "328:11:33" },
+                23: { "Sun": "067:36:35", "Moon": "033:59:00", "Mars": "128:59:20", "Mercury": "090:31:12", "Jupiter": "068:48:02", "Venus": "023:09:54", "Saturn": "337:23:55", "Rahu": "328:08:22" },
+                24: { "Sun": "068:33:51", "Moon": "048:47:25", "Mars": "129:33:27", "Mercury": "091:58:22", "Jupiter": "069:01:44", "Venus": "024:14:04", "Saturn": "337:25:52", "Rahu": "328:05:11" },
+                25: { "Sun": "069:31:07", "Moon": "063:31:38", "Mars": "130:07:39", "Mercury": "093:22:58", "Jupiter": "069:15:27", "Venus": "025:18:26", "Saturn": "337:27:43", "Rahu": "328:02:00" },
+                26: { "Sun": "070:28:22", "Moon": "078:03:25", "Mars": "130:41:56", "Mercury": "094:44:60", "Jupiter": "069:29:09", "Venus": "026:22:59", "Saturn": "337:29:29", "Rahu": "327:58:50" },
+                27: { "Sun": "071:25:37", "Moon": "092:15:44", "Mars": "131:16:19", "Mercury": "096:04:24", "Jupiter": "069:42:51", "Venus": "027:27:44", "Saturn": "337:31:08", "Rahu": "327:55:39" },
+                28: { "Sun": "072:22:52", "Moon": "106:03:52", "Mars": "131:50:46", "Mercury": "097:21:08", "Jupiter": "069:56:32", "Venus": "028:32:39", "Saturn": "337:32:42", "Rahu": "327:52:28" },
+                29: { "Sun": "073:20:06", "Moon": "119:25:50", "Mars": "132:25:18", "Mercury": "098:35:09", "Jupiter": "070:10:13", "Venus": "029:37:46", "Saturn": "337:34:10", "Rahu": "327:49:17" },
+                30: { "Sun": "074:17:20", "Moon": "132:22:16", "Mars": "132:59:55", "Mercury": "099:46:23", "Jupiter": "070:23:54", "Venus": "030:43:02", "Saturn": "337:35:32", "Rahu": "327:46:06" }
+            },
+            "July": {
+                1: { "Sun": "075:14:33", "Moon": "144:55:55", "Mars": "133:34:37", "Mercury": "100:54:47", "Jupiter": "070:37:34", "Venus": "031:48:29", "Saturn": "337:36:48", "Rahu": "327:42:56" },
+                2: { "Sun": "076:11:46", "Moon": "157:10:57", "Mars": "134:09:24", "Mercury": "102:00:15", "Jupiter": "070:51:14", "Venus": "032:54:05", "Saturn": "337:37:57", "Rahu": "327:39:45" },
+                3: { "Sun": "077:08:59", "Moon": "169:12:24", "Mars": "134:44:15", "Mercury": "103:02:43", "Jupiter": "071:04:53", "Venus": "033:59:51", "Saturn": "337:39:01", "Rahu": "327:36:34" },
+                4: { "Sun": "078:06:11", "Moon": "181:05:34", "Mars": "135:19:11", "Mercury": "104:02:05", "Jupiter": "071:18:32", "Venus": "035:05:47", "Saturn": "337:39:59", "Rahu": "327:33:23" },
+                5: { "Sun": "079:03:23", "Moon": "192:55:40", "Mars": "135:54:11", "Mercury": "104:58:17", "Jupiter": "071:32:09", "Venus": "036:11:52", "Saturn": "337:40:51", "Rahu": "327:30:13" },
+                6: { "Sun": "080:00:35", "Moon": "204:47:30", "Mars": "136:29:16", "Mercury": "105:51:10", "Jupiter": "071:45:46", "Venus": "037:18:07", "Saturn": "337:41:37", "Rahu": "327:27:02" },
+                7: { "Sun": "080:57:47", "Moon": "216:45:13", "Mars": "137:04:25", "Mercury": "106:40:38", "Jupiter": "071:59:22", "Venus": "038:24:30", "Saturn": "337:42:17", "Rahu": "327:23:51" },
+                8: { "Sun": "081:54:58", "Moon": "228:52:10", "Mars": "137:39:39", "Mercury": "107:26:35", "Jupiter": "072:12:56", "Venus": "039:31:02", "Saturn": "337:42:50", "Rahu": "327:20:40" },
+                9: { "Sun": "082:52:10", "Moon": "241:10:41", "Mars": "138:14:56", "Mercury": "108:08:52", "Jupiter": "072:26:30", "Venus": "040:37:43", "Saturn": "337:43:18", "Rahu": "327:17:29" },
+                10: { "Sun": "083:49:21", "Moon": "253:42:09", "Mars": "138:50:19", "Mercury": "108:47:22", "Jupiter": "072:40:03", "Venus": "041:44:33", "Saturn": "337:43:40", "Rahu": "327:14:19" },
+                11: { "Sun": "084:46:33", "Moon": "266:26:59", "Mars": "139:25:45", "Mercury": "109:21:56", "Jupiter": "072:53:34", "Venus": "042:51:31", "Saturn": "337:43:55", "Rahu": "327:11:08" },
+                12: { "Sun": "085:43:45", "Moon": "279:24:52", "Mars": "140:01:16", "Mercury": "109:52:26", "Jupiter": "073:07:05", "Venus": "043:58:38", "Saturn": "337:44:05", "Rahu": "327:07:57" },
+                13: { "Sun": "086:40:57", "Moon": "292:35:04", "Mars": "140:36:51", "Mercury": "110:18:43", "Jupiter": "073:20:34", "Venus": "045:05:52", "Saturn": "337:44:09", "Rahu": "327:04:46" },
+                14: { "Sun": "087:38:09", "Moon": "305:56:41", "Mars": "141:12:30", "Mercury": "110:40:39", "Jupiter": "073:34:02", "Venus": "046:13:15", "Saturn": "337:44:06", "Rahu": "327:01:36" },
+                15: { "Sun": "088:35:22", "Moon": "319:28:59", "Mars": "141:48:14", "Mercury": "110:58:07", "Jupiter": "073:47:28", "Venus": "047:20:46", "Saturn": "337:43:58", "Rahu": "326:58:25" },
+                16: { "Sun": "089:32:36", "Moon": "333:11:30", "Mars": "142:24:02", "Mercury": "111:10:59", "Jupiter": "074:00:53", "Venus": "048:28:25", "Saturn": "337:43:43", "Rahu": "326:55:14" },
+                17: { "Sun": "090:29:50", "Moon": "347:03:60", "Mars": "142:59:54", "Mercury": "111:19:08", "Jupiter": "074:14:16", "Venus": "049:36:12", "Saturn": "337:43:22", "Rahu": "326:52:03" },
+                18: { "Sun": "091:27:05", "Moon": "001:06:11", "Mars": "143:35:51", "Mercury": "111:22:29", "Jupiter": "074:27:38", "Venus": "050:44:06", "Saturn": "337:42:56", "Rahu": "326:48:53" },
+                19: { "Sun": "092:24:20", "Moon": "015:17:22", "Mars": "144:11:52", "Mercury": "111:20:60", "Jupiter": "074:40:58", "Venus": "051:52:07", "Saturn": "337:42:23", "Rahu": "326:45:42" },
+                20: { "Sun": "093:21:36", "Moon": "029:35:54", "Mars": "144:47:57", "Mercury": "111:14:38", "Jupiter": "074:54:17", "Venus": "053:00:16", "Saturn": "337:41:44", "Rahu": "326:42:31" },
+                21: { "Sun": "094:18:53", "Moon": "043:58:56", "Mars": "145:24:07", "Mercury": "111:03:24", "Jupiter": "075:07:34", "Venus": "054:08:32", "Saturn": "337:40:59", "Rahu": "326:39:20" },
+                22: { "Sun": "095:16:11", "Moon": "058:22:18", "Mars": "146:00:21", "Mercury": "110:47:22", "Jupiter": "075:20:48", "Venus": "055:16:55", "Saturn": "337:40:09", "Rahu": "326:36:09" },
+                23: { "Sun": "096:13:30", "Moon": "072:40:52", "Mars": "146:36:39", "Mercury": "110:26:40", "Jupiter": "075:34:01", "Venus": "056:25:24", "Saturn": "337:39:12", "Rahu": "326:32:59" },
+                24: { "Sun": "097:10:49", "Moon": "086:49:07", "Mars": "147:13:02", "Mercury": "110:01:29", "Jupiter": "075:47:12", "Venus": "057:34:00", "Saturn": "337:38:09", "Rahu": "326:29:48" },
+                25: { "Sun": "098:08:09", "Moon": "100:42:02", "Mars": "147:49:29", "Mercury": "109:32:05", "Jupiter": "076:00:21", "Venus": "058:42:43", "Saturn": "337:37:00", "Rahu": "326:26:37" },
+                26: { "Sun": "099:05:29", "Moon": "114:15:51", "Mars": "148:25:60", "Mercury": "108:58:50", "Jupiter": "076:13:27", "Venus": "059:51:31", "Saturn": "337:35:46", "Rahu": "326:23:26" },
+                27: { "Sun": "100:02:50", "Moon": "127:28:31", "Mars": "149:02:35", "Mercury": "108:22:09", "Jupiter": "076:26:31", "Venus": "061:00:26", "Saturn": "337:34:25", "Rahu": "326:20:16" },
+                28: { "Sun": "101:00:12", "Moon": "140:19:55", "Mars": "149:39:14", "Mercury": "107:42:32", "Jupiter": "076:39:33", "Venus": "062:09:27", "Saturn": "337:32:59", "Rahu": "326:17:05" },
+                29: { "Sun": "101:57:34", "Moon": "152:51:39", "Mars": "150:15:58", "Mercury": "107:00:37", "Jupiter": "076:52:32", "Venus": "063:18:34", "Saturn": "337:31:27", "Rahu": "326:13:54" },
+                30: { "Sun": "102:54:56", "Moon": "165:06:42", "Mars": "150:52:45", "Mercury": "106:17:02", "Jupiter": "077:05:29", "Venus": "064:27:46", "Saturn": "337:29:49", "Rahu": "326:10:43" },
+                31: { "Sun": "103:52:20", "Moon": "177:09:07", "Mars": "151:29:37", "Mercury": "105:32:32", "Jupiter": "077:18:23", "Venus": "065:37:05", "Saturn": "337:28:05", "Rahu": "326:07:33" }
+            },
+            "August": {
+                1: { "Sun": "104:49:43", "Moon": "189:03:36", "Mars": "152:06:32", "Mercury": "104:47:54", "Jupiter": "077:31:14", "Venus": "066:46:29", "Saturn": "337:26:16", "Rahu": "326:04:22" },
+                2: { "Sun": "105:47:08", "Moon": "200:55:07", "Mars": "152:43:31", "Mercury": "104:03:56", "Jupiter": "077:44:03", "Venus": "067:55:59", "Saturn": "337:24:21", "Rahu": "326:01:11" },
+                3: { "Sun": "106:44:33", "Moon": "212:48:37", "Mars": "153:20:34", "Mercury": "103:21:27", "Jupiter": "077:56:49", "Venus": "069:05:35", "Saturn": "337:22:21", "Rahu": "325:58:00" },
+                4: { "Sun": "107:41:58", "Moon": "224:48:48", "Mars": "153:57:42", "Mercury": "102:41:17", "Jupiter": "078:09:32", "Venus": "070:15:16", "Saturn": "337:20:15", "Rahu": "325:54:49" },
+                5: { "Sun": "108:39:24", "Moon": "236:59:48", "Mars": "154:34:52", "Mercury": "102:04:12", "Jupiter": "078:22:12", "Venus": "071:25:03", "Saturn": "337:18:03", "Rahu": "325:51:39" },
+                6: { "Sun": "109:36:51", "Moon": "249:24:54", "Mars": "155:12:07", "Mercury": "101:30:57", "Jupiter": "078:34:48", "Venus": "072:34:55", "Saturn": "337:15:47", "Rahu": "325:48:28" },
+                7: { "Sun": "110:34:19", "Moon": "262:06:24", "Mars": "155:49:26", "Mercury": "101:02:13", "Jupiter": "078:47:22", "Venus": "073:44:53", "Saturn": "337:13:25", "Rahu": "325:45:17" },
+                8: { "Sun": "111:31:48", "Moon": "275:05:24", "Mars": "156:26:48", "Mercury": "100:38:35", "Jupiter": "078:59:53", "Venus": "074:54:57", "Saturn": "337:10:58", "Rahu": "325:42:06" },
+                9: { "Sun": "112:29:18", "Moon": "288:21:43", "Mars": "157:04:14", "Mercury": "100:20:36", "Jupiter": "079:12:20", "Venus": "076:05:06", "Saturn": "337:08:25", "Rahu": "325:38:56" },
+                10: { "Sun": "113:26:48", "Moon": "301:54:03", "Mars": "157:41:44", "Mercury": "100:08:43", "Jupiter": "079:24:44", "Venus": "077:15:20", "Saturn": "337:05:48", "Rahu": "325:35:45" },
+                11: { "Sun": "114:24:20", "Moon": "315:40:12", "Mars": "158:19:18", "Mercury": "100:03:17", "Jupiter": "079:37:04", "Venus": "078:25:40", "Saturn": "337:03:05", "Rahu": "325:32:34" },
+                12: { "Sun": "115:21:53", "Moon": "329:37:23", "Mars": "158:56:56", "Mercury": "100:04:37", "Jupiter": "079:49:21", "Venus": "079:36:06", "Saturn": "337:00:18", "Rahu": "325:29:23" },
+                13: { "Sun": "116:19:28", "Moon": "343:42:40", "Mars": "159:34:37", "Mercury": "100:12:54", "Jupiter": "080:01:35", "Venus": "080:46:37", "Saturn": "336:57:25", "Rahu": "325:26:13" },
+                14: { "Sun": "117:17:04", "Moon": "357:53:10", "Mars": "160:12:23", "Mercury": "100:28:17", "Jupiter": "080:13:45", "Venus": "081:57:13", "Saturn": "336:54:28", "Rahu": "325:23:02" },
+                15: { "Sun": "118:14:41", "Moon": "012:06:18", "Mars": "160:50:12", "Mercury": "100:50:90", "Jupiter": "080:25:51", "Venus": "083:07:55", "Saturn": "336:51:26", "Rahu": "325:19:51" },
+                16: { "Sun": "119:12:20", "Moon": "026:19:44", "Mars": "161:28:06", "Mercury": "101:20:35", "Jupiter": "080:37:54", "Venus": "084:18:42", "Saturn": "336:48:19", "Rahu": "325:16:40" },
+                17: { "Sun": "120:10:00", "Moon": "040:31:16", "Mars": "162:06:03", "Mercury": "101:57:30", "Jupiter": "080:49:52", "Venus": "085:29:34", "Saturn": "336:45:08", "Rahu": "325:13:29" },
+                18: { "Sun": "121:07:42", "Moon": "054:38:41", "Mars": "162:44:04", "Mercury": "102:41:29", "Jupiter": "081:01:47", "Venus": "086:40:31", "Saturn": "336:41:52", "Rahu": "325:10:19" },
+                19: { "Sun": "122:05:26", "Moon": "068:39:40", "Mars": "163:22:10", "Mercury": "103:32:23", "Jupiter": "081:13:37", "Venus": "087:51:33", "Saturn": "336:38:31", "Rahu": "325:07:08" },
+                20: { "Sun": "123:03:11", "Moon": "082:31:47", "Mars": "164:00:19", "Mercury": "104:30:04", "Jupiter": "081:25:24", "Venus": "089:02:41", "Saturn": "336:35:07", "Rahu": "325:03:57" },
+                21: { "Sun": "124:00:58", "Moon": "096:12:36", "Mars": "164:38:32", "Mercury": "105:34:16", "Jupiter": "081:37:06", "Venus": "090:13:53", "Saturn": "336:31:38", "Rahu": "325:00:46" },
+                22: { "Sun": "124:58:46", "Moon": "109:39:54", "Mars": "165:16:50", "Mercury": "106:44:44", "Jupiter": "081:48:44", "Venus": "091:25:10", "Saturn": "336:28:05", "Rahu": "324:57:36" },
+                23: { "Sun": "125:56:36", "Moon": "122:52:01", "Mars": "165:55:11", "Mercury": "108:01:10", "Jupiter": "082:00:17", "Venus": "092:36:31", "Saturn": "336:24:27", "Rahu": "324:54:25" },
+                24: { "Sun": "126:54:27", "Moon": "135:47:58", "Mars": "166:33:36", "Mercury": "109:23:14", "Jupiter": "082:11:45", "Venus": "093:47:57", "Saturn": "336:20:46", "Rahu": "324:51:14" },
+                25: { "Sun": "127:52:19", "Moon": "148:27:45", "Mars": "167:12:05", "Mercury": "110:50:33", "Jupiter": "082:23:09", "Venus": "094:59:28", "Saturn": "336:17:01", "Rahu": "324:48:03" },
+                26: { "Sun": "128:50:13", "Moon": "160:52:21", "Mars": "167:50:38", "Mercury": "112:22:41", "Jupiter": "082:34:29", "Venus": "096:11:03", "Saturn": "336:13:12", "Rahu": "324:44:52" },
+                27: { "Sun": "129:48:09", "Moon": "173:03:42", "Mars": "168:29:15", "Mercury": "113:59:14", "Jupiter": "082:45:43", "Venus": "097:22:42", "Saturn": "336:09:20", "Rahu": "324:41:42" },
+                28: { "Sun": "130:46:05", "Moon": "185:04:39", "Mars": "169:07:56", "Mercury": "115:39:43", "Jupiter": "082:56:53", "Venus": "098:34:26", "Saturn": "336:05:24", "Rahu": "324:38:31" },
+                29: { "Sun": "131:44:03", "Moon": "196:58:48", "Mars": "169:46:40", "Mercury": "117:23:40", "Jupiter": "083:07:57", "Venus": "099:46:14", "Saturn": "336:01:25", "Rahu": "324:35:20" },
+                30: { "Sun": "132:42:03", "Moon": "208:50:17", "Mars": "170:25:28", "Mercury": "119:10:39", "Jupiter": "083:18:56", "Venus": "100:58:06", "Saturn": "335:57:23", "Rahu": "324:32:09" },
+                31: { "Sun": "133:40:03", "Moon": "220:43:36", "Mars": "171:04:20", "Mercury": "121:00:09", "Jupiter": "083:29:50", "Venus": "102:10:02", "Saturn": "335:53:18", "Rahu": "324:28:59" }
+            }
+        };
+
+        const planetColors = {
+            "Sun": "#FFD700", // Gold
+            "Moon": "#C0C0C0", // Silver
+            "Mars": "#FF4500", // OrangeRed
+            "Mercury": "#32CD32", // LimeGreen
+            "Jupiter": "#FFA500", // Orange
+            "Venus": "#FF69B4", // HotPink
+            "Saturn": "#8A2BE2", // BlueViolet
+            "Rahu": "#8B4513", // SaddleBrown
+            "Ketu": "#00FFFF"  // Cyan - Changed for better visibility
+        };
+
+        // Global variable to store information about drawn path points for interactivity
+        let allPlanetPathsData = {};
+
+        // Function to draw the polar plot for planetary ephemeris
+        function drawPlot(selectedMonth) {
+            const canvas = document.getElementById('polarPlotCanvas');
+            if (!canvas) return;
+
+            // Get device pixel ratio for sharper rendering on high-DPI screens
+            const dpr = window.devicePixelRatio || 1;
+            const containerWidth = canvas.parentElement.clientWidth;
+            const displayWidth = Math.min(containerWidth, 500);
+            const displayHeight = displayWidth; // Maintain aspect ratio
+
+            // Set canvas internal resolution higher for sharpness
+            canvas.width = displayWidth * dpr;
+            canvas.height = displayHeight * dpr;
+
+            // Scale the canvas element back to its original display size
+            canvas.style.width = `${displayWidth}px`;
+            canvas.style.height = `${displayHeight}px`;
+
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr); // Scale all drawing operations by the device pixel ratio
+
+            const centerX = displayWidth / 2;
+            const centerY = displayHeight / 2;
+            const outerPlotRadius = Math.min(centerX, centerY) * 0.8;
+
+            // Get the raw data for the selected month
+            const rawMonthData = allMonthlyEphemerisData[selectedMonth];
+            if (!rawMonthData) {
+                console.error(`No data found for month: ${selectedMonth}`);
+                return;
+            }
+
+            // Determine the number of days in the selected month
+            const daysInMonth = Object.keys(rawMonthData).length;
+
+            // Define min and max radial range for planet paths based on days in month
+            const minRadial = outerPlotRadius * 0.1;
+            const maxRadial = outerPlotRadius * 0.7;
+            const radialScale = (maxRadial - minRadial) / (daysInMonth - 1); // Scale based on actual days
+
+            ctx.clearRect(0, 0, displayWidth, displayHeight); // Clear with display dimensions
+            ctx.save();
+            ctx.translate(centerX, centerY);
+
+            // Draw outer circle (zodiac boundary)
+            ctx.beginPath();
+            ctx.arc(0, 0, outerPlotRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2; // Keep line width consistent
+            ctx.stroke();
+
+            // Draw zodiac sign divisions and labels
+            for (let i = 0; i < 12; i++) {
+                const startLongitude = zodiacSigns[i].range[0];
+
+                // Convert longitude to canvas angle (0 at right, counter-clockwise)
+                const startAngle = (360 - startLongitude) * Math.PI / 180;
+
+                // Draw division lines from center to outer circle
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(outerPlotRadius * Math.cos(startAngle), outerPlotRadius * Math.sin(startAngle));
+                ctx.strokeStyle = '#ddd';
+                ctx.stroke();
+
+                // Draw sign names
+                const midLongitude = zodiacSigns[i].midLongitude;
+                const midAngle = (360 - midLongitude) * Math.PI / 180;
+                const textRadius = outerPlotRadius * 1.08;
+                ctx.font = '12px Arial'; // Font size remains the same, but scaled by dpr
+                ctx.fillStyle = '#555';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(zodiacSigns[i].name, textRadius * Math.cos(midAngle), textRadius * Math.sin(midAngle));
+            }
+
+            // Draw concentric circles for dates (every 5 days)
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1; // Keep line width consistent
+            ctx.font = '9px Arial'; // Font size remains the same, but scaled by dpr
+            ctx.fillStyle = '#777';
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                if (day % 5 === 0 || day === 1 || day === daysInMonth) { // Label 1st, last, and every 5th day
+                    const currentRadius = minRadial + (day - 1) * radialScale;
+
+                    ctx.beginPath();
+                    ctx.arc(0, 0, currentRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+                    if (currentRadius > 10) { // Avoid labeling too close to center
+                        ctx.fillText(day.toString(), currentRadius + 5, 0);
+                    }
+                }
+            }
+
+            // Clear previous planet path data
+            allPlanetPathsData = {};
+
+            // Prepare all planet data for the selected month
+            for (const planetName in planetColors) { // Iterate through all 9 planets
+                if (planetName === "Ketu") continue; // Ketu is handled separately based on Rahu
+
+                allPlanetPathsData[planetName] = [];
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const dailyData = rawMonthData[day];
+                    if (!dailyData || !dailyData[planetName]) {
+                        // If data for this planet/day is missing, skip or handle appropriately
+                        continue;
+                    }
+
+                    const dmsLongitude = dailyData[planetName];
+                    const decimalLongitude = dmsToDecimal(dmsLongitude);
+                    const currentSignName = getZodiacSign(decimalLongitude);
+                    const currentNakshatraName = getNakshatra(decimalLongitude); // Get Nakshatra
+
+                    // Calculate the radial position for the current day
+                    const radialPosition = minRadial + (day - 1) * radialScale;
+                    const angle = (360 - decimalLongitude) * Math.PI / 180; // Use actual longitude for angle
+
+                    const x = radialPosition * Math.cos(angle);
+                    const y = radialPosition * Math.sin(angle);
+
+                    // Create a formatted date string for the tooltip
+                    const formattedDate = `${selectedMonth} ${day}`;
+
+                    allPlanetPathsData[planetName].push({
+                        x: x,
+                        y: y,
+                        date: formattedDate,
+                        sign: currentSignName,
+                        nakshatra: currentNakshatraName, // Add Nakshatra
+                        longitude: decimalLongitude.toFixed(2) // Add exact longitude
+                    });
+                }
+            }
+
+            // Handle Ketu separately, based on Rahu's position
+            allPlanetPathsData["Ketu"] = [];
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dailyData = rawMonthData[day];
+                if (!dailyData || !dailyData["Rahu"]) {
+                    continue;
+                }
+                const rahuLongitude = dmsToDecimal(dailyData["Rahu"]);
+                const ketuLongitude = (rahuLongitude + 180) % 360; // Ketu is 180 degrees from Rahu
+                const ketuSignName = getZodiacSign(ketuLongitude);
+                const ketuNakshatraName = getNakshatra(ketuLongitude); // Get Nakshatra for Ketu
+
+                const radialPosition = minRadial + (day - 1) * radialScale;
+                const angle = (360 - ketuLongitude) * Math.PI / 180;
+
+                const x = radialPosition * Math.cos(angle);
+                const y = radialPosition * Math.sin(angle);
+
+                const formattedDate = `${selectedMonth} ${day}`;
+
+                allPlanetPathsData["Ketu"].push({
+                    x: x,
+                    y: y,
+                    date: formattedDate,
+                    sign: ketuSignName,
+                    nakshatra: ketuNakshatraName, // Add Nakshatra for Ketu
+                    longitude: ketuLongitude.toFixed(2) // Add exact longitude for Ketu
+                });
+            }
+
+
+            // Draw planet paths using a spline-like approach (many small line segments)
+            for (const planetName in allPlanetPathsData) {
+                const path = allPlanetPathsData[planetName];
+                if (path.length === 0) continue;
+
+                ctx.beginPath();
+                ctx.strokeStyle = planetColors[planetName] || '#000000';
+                ctx.lineWidth = 2; // Keep line width consistent
+
+                // Move to the first point
+                ctx.moveTo(path[0].x, path[0].y);
+
+                // Draw lines to all subsequent points
+                for (let i = 1; i < path.length; i++) {
+                    ctx.lineTo(path[i].x, path[i].y);
+                }
+                ctx.stroke();
+
+                // Optionally mark start and end points
+                ctx.beginPath();
+                ctx.arc(path[0].x, path[0].y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = planetColors[planetName] || '#000000';
+                ctx.fill();
+
+                const lastPoint = path[path.length - 1];
+                ctx.beginPath();
+                ctx.arc(lastPoint.x, lastPoint.y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = planetColors[planetName] || '#000000';
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        // Function to populate the legend dynamically
+        function populateLegend() {
+            const legendContainer = document.getElementById('legendContainer');
+            legendContainer.innerHTML = '<h4>Legend:</h4>'; // Clear existing
+            for (const planetName in planetColors) {
+                const color = planetColors[planetName];
+                if (color) { // Only add if color is defined
+                    const item = document.createElement('div');
+                    item.className = 'legend-item';
+                    item.innerHTML = `
+                        <div class="legend-color-box" style="background-color: ${color};"></div>
+                        <span>${planetName}</span>
+                    `;
+                    legendContainer.appendChild(item);
+                }
+            }
+        }
+
+        // --- Interactivity (Hover) Logic ---
+        const tooltip = document.getElementById('tooltip');
+        const canvas = document.getElementById('polarPlotCanvas');
+        const HOVER_POINT_TOLERANCE = 8; // Pixels for hit detection on individual points (logical pixels)
+
+        canvas.addEventListener('mousemove', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            // Mouse coordinates relative to the canvas's top-left corner in CSS pixels (logical pixels)
+            const mouseX_logical = event.clientX - rect.left;
+            const mouseY_logical = event.clientY - rect.top;
+
+            // Get the current display dimensions of the canvas element
+            const displayWidth = parseFloat(canvas.style.width);
+            const displayHeight = parseFloat(canvas.style.height);
+
+            // Mouse coordinates relative to the logical center of the canvas
+            const mouseX_centered = mouseX_logical - displayWidth / 2;
+            const mouseY_centered = mouseY_logical - displayHeight / 2;
+
+            let hoveredPointData = null;
+            let minDistance = Infinity;
+
+            // Iterate through all planet paths to find the closest point
+            for (const planetName in allPlanetPathsData) {
+                const path = allPlanetPathsData[planetName];
+                for (let i = 0; i < path.length; i++) {
+                    const point = path[i];
+                    // point.x and point.y are already in logical pixels (before ctx.scale)
+                    const dist = Math.sqrt(Math.pow(mouseX_centered - point.x, 2) + Math.pow(mouseY_centered - point.y, 2));
+
+                    if (dist < HOVER_POINT_TOLERANCE && dist < minDistance) {
+                        minDistance = dist;
+                        hoveredPointData = {
+                            planet: planetName,
+                            date: point.date,
+                            sign: point.sign,
+                            nakshatra: point.nakshatra, // Add Nakshatra
+                            longitude: point.longitude  // Add exact longitude
+                        };
+                    }
+                }
+            }
+
+            if (hoveredPointData) {
+                tooltip.classList.add('active');
+                tooltip.innerHTML = `
+                    <strong>Planet:</strong> ${hoveredPointData.planet}<br>
+                    <strong>Date:</strong> ${hoveredPointData.date}<br>
+                    <strong>Longitude:</strong> ${hoveredPointData.longitude}°<br>
+                    <strong>Zodiac Sign:</strong> ${hoveredPointData.sign}<br>
+                    <strong>Nakshatra:</strong> ${hoveredPointData.nakshatra}
+                `;
+                // Position the tooltip relative to the plot-area, not canvas
+                const plotAreaRect = canvas.parentElement.getBoundingClientRect();
+                tooltip.style.left = `${event.clientX - plotAreaRect.left}px`;
+                tooltip.style.top = `${event.clientY - plotAreaRect.top}px`;
+            } else {
+                tooltip.classList.remove('active');
+            }
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            tooltip.classList.remove('active');
+        });
+
+        // Initial drawing and resize handling
+        window.onload = function() {
+            populateLegend();
+
+            const monthSelect = document.getElementById('monthSelect');
+            const plotTitle = document.getElementById('plotTitle');
+
+            // Set initial month to March and draw the plot
+            monthSelect.value = "March";
+            plotTitle.textContent = `Planetary Ephemeris for ${monthSelect.value} 2025`;
+            drawPlot(monthSelect.value);
+
+            // Add event listener for dropdown change
+            monthSelect.addEventListener('change', (event) => {
+                const selectedMonth = event.target.value;
+                plotTitle.textContent = `Planetary Ephemeris for ${selectedMonth} 2025`;
+                drawPlot(selectedMonth);
+            });
+
+            window.onresize = function() {
+                // Redraw on resize to adjust to new canvas size for the currently selected month
+                drawPlot(monthSelect.value);
+            };
+        };
+    </script>
+</body>
+</html>

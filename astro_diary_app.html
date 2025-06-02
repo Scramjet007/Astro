@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vedic Astrology Diary</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Darker background for a celestial feel */
+            background-image: radial-gradient(at 50% 100%, rgba(20, 30, 50, 0.8), rgba(0, 0, 0, 0.9));
+            color: #e2e8f0; /* Light text for contrast */
+        }
+        /* Custom scrollbar for textarea */
+        textarea::-webkit-scrollbar {
+            width: 8px;
+        }
+        textarea::-webkit-scrollbar-track {
+            background: #4a5568; /* Darker track */
+            border-radius: 10px;
+        }
+        textarea::-webkit-scrollbar-thumb {
+            background: #718096; /* Muted thumb */
+            border-radius: 10px;
+        }
+        textarea::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0; /* Lighter hover */
+        }
+        /* Canvas styling for responsiveness */
+        #horoscope-chart {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            height: auto; /* Maintain aspect ratio */
+            border-radius: 1rem; /* Rounded corners */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); /* Deeper shadow */
+            background-color: #2d3748; /* Darker canvas background */
+        }
+        /* Message box styles */
+        .message-box {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .message-box-content {
+            background-color: #2d3748; /* Darker modal background */
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.4);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            color: #e2e8f0;
+        }
+        /* Button styles */
+        .button-primary {
+            background-color: #4c51bf; /* Indigo-700 */
+            transition: all 0.3s ease-in-out;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .button-primary:hover {
+            background-color: #5a67d8; /* Indigo-600 */
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+        .button-success {
+            background-color: #38a169; /* Green-600 */
+            transition: all 0.3s ease-in-out;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .button-success:hover {
+            background-color: #48bb78; /* Green-500 */
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="bg-gray-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-4xl flex flex-col md:flex-row gap-6 border border-gray-700">
+        <div class="md:w-1/2 bg-gradient-to-br from-indigo-700 to-purple-800 text-white p-6 rounded-lg shadow-xl flex flex-col justify-between border border-indigo-600">
+            <div>
+                <h2 class="text-3xl font-bold mb-4 text-center border-b-2 border-indigo-400 pb-2">Vedic Astrology for Selected Date</h2>
+                <div class="mb-4 flex flex-col items-center">
+                    <label for="date-selector" class="block text-sm font-semibold mb-2">Select Date:</label>
+                    <input type="date" id="date-selector" class="p-2 rounded-md text-gray-800 bg-white outline-none">
+                    <p class="text-sm text-center mt-2 opacity-90">
+                        <span id="current-date-display"></span>
+                    </p>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 border-b border-indigo-400 pb-2">Planetary Positions</h3>
+                    <canvas id="horoscope-chart"></canvas>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-semibold mb-3 border-b border-indigo-400 pb-2">Panchang Details</h3>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <p><span class="font-medium">Tithi:</span> <span id="tithi-display">Loading...</span></p>
+                        <p><span class="font-medium">Vaar:</span> <span id="vaar-display">Loading...</span></p>
+                        <p><span class="font-medium">Nakshatra:</span> <span id="nakshatra-display">Loading...</span></p>
+                        <p><span class="font-medium">Yoga:</span> <span id="yoga-display">Loading...</span></p>
+                        <p><span class="font-medium">Karana:</span> <span id="karana-display">Loading...</span></p>
+                    </div>
+                </div>
+            </div>
+            <p class="text-xs text-center mt-6 opacity-80">
+                The data corresponds to 5:30 AM IST on the specified date.
+            </p>
+        </div>
+
+        <div class="md:w-1/2 flex flex-col bg-gray-700 p-6 rounded-lg shadow-xl border border-gray-600">
+            <h2 class="text-3xl font-bold text-gray-100 mb-4 text-center border-b-2 border-gray-500 pb-2">My Daily Diary</h2>
+            
+            <label for="daily-observations" class="block text-gray-200 text-sm font-semibold mb-2">Daily Observations:</label>
+            <textarea
+                id="daily-observations"
+                class="flex-grow w-full p-4 border border-gray-600 rounded-lg outline-none resize-y min-h-[100px] md:min-h-[150px] bg-gray-900 text-gray-200 mb-4"
+                placeholder="Enter your daily observations here..."
+            ></textarea>
+
+            <label for="reflections-interpretations" class="block text-gray-200 text-sm font-semibold mb-2">Reflections/Interpretations:</label>
+            <textarea
+                id="reflections-interpretations"
+                class="flex-grow w-full p-4 border border-gray-600 rounded-lg outline-none resize-y min-h-[100px] md:min-h-[150px] bg-gray-900 text-gray-200 mb-4"
+                placeholder="Enter your reflections or interpretations here..."
+            ></textarea>
+
+            <button
+                id="save-button"
+                class="mt-4 w-full button-success text-white font-bold py-3 px-4 rounded-lg"
+            >
+                Save Entry
+            </button>
+            <button
+                id="download-all-button"
+                class="mt-4 w-full button-primary text-white font-bold py-3 px-4 rounded-lg"
+            >
+                Download All Entries
+            </button>
+            <p class="text-xs text-center text-gray-400 mt-4">
+                In reverence to the rishis, crafted by Deepak Jain.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Raw data provided by the user, manually corrected for planetary positions
+        const rawPanchangaData = `Gregorian Date	Year	Month	FullDate	YearName	Ayana	Ritu	SidSolarMonth	LunarMonth	Paksha	Tithi	TithiEndTime	RahuKala	Day	Nakshatra	NakshatraEndTime	Yoga	Karana	Varjya1Start	Varjya1End	Varjya2Start	Varjya2End	DurMuhurta1Start	DurMuhurta1End	DurMuhurta2Start	DurMuhurta2End	Sunrise	Sunset	R1	L1	R2	L2	R3	L3	R4	L4	R5	L5	R6	L6	R7	L7	R8	L8	R9	L9	R10	L10	R11	L11	R12	L12	1_Mesham	2_Vrushabham	3_Mithunam	4_Karkatakam	5_Simham	6_Kanya	7_Tula	8_Vruschikam	9_Dhanur	10_Makaram	11_Kumbham	12_Meenam
+01-05-2025	2025	May	1	Viswa-vasu	Uttarayana	Vasanta	Mesh	Vaisakha	Sukla	Chaturthi	11:25	13:43 - 15:21	Thursday	Mrig	14:19	Atiganda	Vishti	22:16	23:47			15:08	16:00	16:00	16:52	05:34	18:36	Aries	06:19	Taurus	08:15	Gemini	10:29	Cancer	12:48	Leo	15:04	Virgo	17:18	Libra	19:36	Scorpio	21:53	Sagittarius	23:58	Capricorn	01:41	Aquarius	03:11	Pisces	04:38	Sun	Jup	Moon	Mars		Ket						Merc, Ven, Sat, Rah
+02-05-2025	2025	May	2	Viswa-vasu	Uttarayana	Vasanta	Mesh	Vaisakha	Sukla	Panchami	09:16	10:27 - 12:05	Friday	Ardr	13:02	Sukarman	Balava	00:47	02:21			08:10	09:02	12:31	13:23	05:33	18:37	Aries	06:15	Taurus	08:11	Gemini	10:25	Cancer	12:44	Leo	15:00	Virgo	17:14	Libra	19:32	Scorpio	21:49	Sagittarius	23:54	Capricorn	01:38	Aquarius	03:07	Pisces	04:34	Sun	Jup	Moon	Mars		Ket						Merc, Ven, Sat, Rah
+03-05-2025	2025	May	3	Viswa-vasu	Uttarayana	Vasanta	Mesh	Vaisakha	Sukla	Shashthi	07:53	8:49 - 10:27	Saturday	Puna	12:32	Soola	Taitula	20:39	22:16			05:32	18:38	Aries	06:11	Taurus	08:07	Gemini	10:22	Cancer	12:40	Leo	14:56	Virgo	17:10	Libra	19:28	Scorpio	21:45	Sagittarius	23:50	Capricorn	01:34	Aquarius	03:03	Pisces	04:30	Sun	Jup	Moon	Mars		Ket						Merc, Ven, Sat, Rah
+04-05-2025	2025	May	4	Viswa-vasu	Uttarayana	Vasanta	Mesh	Vaisakha	Sukla	Sapthami	07:20	17:00 - 18:38	Sunday	Push	12:52	Ganda	Vanija	02:16	03:56			16:53	17:46			05:31	18:38	Aries	06:07	Taurus	08:03	Gemini	10:18	Cancer	12:36	Leo	14:52	Virgo	17:06	Libra	19:24	Scorpio	21:41	Sagittarius	23:46	Capricorn	01:30	Aquarius	02:59	Pisces	04:26	Sun	Jup		Moon, Mars		Ket						Merc, Ven, Sat, Rah
+05-05-2025	2025	May	5	Viswa-vasu	Uttarayana	Vasanta	Mesh	Vaisakha	Sukla	Ashtami	07:37	7:09 - 8:48	Monday	Asre	13:59	Vriddhi	Bava	02:55	04:38			11:38	12:31	15:09	16:01	05:31	18:39	Aries	06:03	Taurus	07:59	Gemini	10:14	Cancer	12:32	Leo	14:48	Virgo	17:02	Libra	19:20	Scorpio	21:38	Sagittarius	23:42	Capricorn	01:26	Aquarius	02:55	Pisces	04:22	Sun	Jup		Moon, Mars		Ket						Merc, Ven, Sat, Rah
+06-05-2025	2025	May	6	Viswa-vasu	Uttarayana	Vasanta	Mesh	Vaisakha	Sukla	Navami	08:40	15:22 - 17:01	Tuesday	Magh	15:50	Dhruva	Kaulava	00:38	02:24			08:08	09:00	14:16	15:09	05:30	18:39	Aries	05:59	Taurus	07:56	Gemini	10:10	Cancer	12:29	Leo	14:44	Virgo	16:58	Libra	19:16	Scorpio	21:34	Sagittarius	23:38	Capricorn	01:22	Aquarius	02:51	Pisces	04:18	Sun	Jup		Mars	Moon	Ket						Merc, Ven, Sat, Rah
+07-05-2025	2025	May	7	Viswa-vasu	Uttarayana	Vasanta	Mesh	Vaisakha	Sukla	Dasami	10:21	12:05 - 13:43	Wednesday	PPha	18:15	Vyaghata	Garija	18:42	20:29			11:38	12:31			05:29	18:40	Aries	05:55	Taurus	07:52	Gemini	10:06	Cancer	12:25	Leo	14:40	Virgo	16:54	Libra	19:12	Scorpio	21:30	Sagittarius	23:34	Capricorn	01:18	Aquarius	02:47	Pisces	04:14	Sun, Merc	Jup		Mars	Moon	Ket						Ven, Sat, Rah
+08-05-2025	2025	May	8	Viswa-vasu	Uttarayana	Vasanta	Mesh	Vaisakha	Sukla	Ekadasi	12:30	13:43 - 15:22	Thursday	UPha	21:04	Harshana	Vishti					15:09	16:02	16:02	16:55	05:29	18:40	Aries	05:51	Taurus	07:48	Gemini	10:02	Cancer	12:21	Leo	14:36	Virgo	16:50	Libra	19:08	Scorpio	21:26	Sagittarius	23:30	Capricorn	01:14	Aquarius	02:43	Pisces	04:10	Sun, Merc	Jup		Mars		Moon, Ket						Ven, Sat, Rah
+09-05-2025	2025	May	9	Viswa-vasu	Uttarayana	Vasanta	Mesh	Vaisakha	Sukla	Dwadasi	14:57	10:25 - 12:04	Friday	Hast	00:07	Vajra	Balava	06:32	08:20			08:07	08:59	12:31	13:24	05:28	18:41	Aries	05:47	Taurus	07:44	Gemini	09:58	Cancer	12:17	Leo	14:32	Virgo	16:46	Libra	19:04	Scorpio	21:22	Sagittarius	23:26	Capricorn	01:10	Aquarius	02:39	Pisces	04:06	Sun, Merc	Jup		Mars		Moon, Ket						Ven, Sat, Rah
+10-05-2025	2025	May	10	Viswa-vasu	Uttarayana	Vasanta	Mesh	Vaisakha	Sukla	Trayodasi	17:31	8:46 - 10:25	Saturday	Chit	03:13	Siddhi	Taitula	09:09	10:57			05:27	18:41	Aries	05:43	Taurus	07:40	Gemini	09:54	Cancer	12:13	Leo	14:28	Virgo	16:42	Libra	19:00	Scorpio	21:18	Sagittarius	23:22	Capricorn	01:06	Aquarius	02:35	Pisces	04:02	Sun, Merc	Jup		Mars		Moon, Ket						Ven, Sat, Rah
+11-05-2025	2025	May	11	Viswa-vasu	Uttarayana	Vasanta	Mesh	Vaisakha	Sukla	Chaturdasi	20:03	17:03 - 18:42	Sunday	Swat	06:15	Vyatipata	Garija	09:32	11:20			16:56	17:49			05:27	18:42	Aries	05:39	Taurus	07:36	Gemini	09:50	Cancer	12:09	Leo	14:24	Virgo	16:39	Libra	18:56	Scorpio	21:14	Sagittarius	23:18	Capricorn	01:02	Aquarius	02:32	Pisces	03:58	Sun, Merc	Jup		Mars		Ket	Moon					Ven, Sat, Rah
+12-05-2025	2025	May	12	Viswa-vasu	Uttarayana	Vasanta	Mesh	Vaisakha	Sukla	Pournimasya	22:26	7:06 - 8:45	Monday	Swat	06:15	Variyan	Vishti	12:31	14:19			11:38	12:31	15:10	16:03	05:26	18:43	Aries	05:35	Taurus	07:32	Gemini	09:46	Cancer	12:05	Leo	14:20	Virgo	16:35	Libra	18:52	Scorpio	21:10	Sagittarius	23:14	Capricorn	00:58	Aquarius	02:28	Pisces	03:55	Sun, Merc	Jup		Mars		Ket	Moon					Ven, Sat, Rah
+13-05-2025	2025	May	13	Viswa-vasu	Uttarayana	Vasanta	Mesh	Vaisakha	Krishna	Pratipat	00:37	15:24 - 17:03	Tuesday	Visa	09:07	Variyan	Balava	13:34	15:20			08:05	08:58	14:17	15:10	05:26	18:43	Aries	05:32	Taurus	07:28	Gemini	09:42	Cancer	12:01	Leo	14:16	Virgo	16:31	Libra	18:48	Scorpio	21:06	Sagittarius	23:11	Capricorn	00:54	Aquarius	02:24	Pisces	03:51	Sun, Merc	Jup		Mars		Ket		Moon				Ven, Sat, Rah
+14-05-2025	2025	May	14	Viswa-vasu	Uttarayana	Vasanta	Mesh	Vaisakha	Krishna	Dwitiya	02:30	12:04 - 13:44	Wednesday	Anu	11:45	Parigha	Taitula	17:54	19:39			11:38	12:31			05:25	18:44	Aries	05:28	Taurus	07:24	Gemini	09:38	Cancer	11:57	Leo	14:12	Virgo	16:27	Libra	18:45	Scorpio	21:02	Sagittarius	23:07	Capricorn	00:50	Aquarius	02:20	Pisces	03:47	Sun, Merc	Jup		Mars		Ket		Moon				Ven, Sat, Rah
+15-05-2025	2025	May	15	Viswa-vasu	Uttarayana	Vasanta	Vrish	Vaisakha	Krishna	Tritiya	04:04	13:44 - 15:24	Thursday	Jye	14:06	Siva	Vanija	22:46	00:30			15:11	16:04	16:04	16:58	05:24	18:44	Taurus	07:20	Gemini	09:34	Cancer	11:53	Leo	14:09	Virgo	16:23	Libra	18:41	Scorpio	20:58	Sagittarius	23:03	Capricorn	00:46	Aquarius	02:16	Pisces	03:43	Aries	05:20	Merc	Sun	Jup	Mars		Ket		Moon				Ven, Sat, Rah
+16-05-2025	2025	May	16	Viswa-vasu	Uttarayana	Vasanta	Vrish	Vaisakha	Krishna	Chaturthi	05:15	10:24 - 12:04	Friday	Mool	16:06	Siddha	Bava	00:38	02:20			08:04	08:57	12:31	13:24	05:24	18:45	Taurus	07:16	Gemini	09:30	Cancer	11:49	Leo	14:05	Virgo	16:19	Libra	18:37	Scorpio	20:54	Sagittarius	22:59	Capricorn	00:43	Aquarius	02:12	Pisces	03:39	Aries	05:16	Merc	Sun	Jup	Mars		Ket			Moon			Ven, Sat, Rah
+17-05-2025	2025	May	17	Viswa-vasu	Uttarayana	Vasanta	Vrish	Vaisakha	Krishna	Panchami	05:59	8:44 - 10:24	Saturday	PSha	17:42	Sadhya	Kaulava	02:05	03:45			05:23	06:17	06:17	07:10	05:23	18:45	Taurus	07:12	Gemini	09:26	Cancer	11:45	Leo	14:01	Virgo	16:15	Libra	18:33	Scorpio	20:50	Sagittarius	22:55	Capricorn	00:39	Aquarius	02:08	Pisces	03:35	Aries	05:12	Merc	Sun	Jup	Mars		Ket			Moon			Ven, Sat, Rah
+18-05-2025	2025	May	18	Viswa-vasu	Uttarayana	Vasanta	Vrish	Vaisakha	Krishna	Panchami	05:59	17:05 - 18:46	Sunday	USha	18:51	Subha	Taitula	22:57	00:35			16:59	17:52			05:23	18:46	Taurus	07:08	Gemini	09:23	Cancer	11:41	Leo	13:57	Virgo	16:11	Libra	18:29	Scorpio	20:46	Sagittarius	22:51	Capricorn	00:35	Aquarius	02:04	Pisces	03:31	Aries	05:08	Merc	Sun	Jup	Mars		Ket				Moon		Ven, Sat, Rah
+19-05-2025	2025	May	19	Viswa-vasu	Uttarayana	Vasanta	Vrish	Vaisakha	Krishna	Shashthi	06:13	7:03 - 8:43	Monday	Srav	19:28	Sukla	Vanija	23:28	01:05			11:38	12:31	15:12	16:06	05:23	18:46	Taurus	07:04	Gemini	09:19	Cancer	11:37	Leo	13:53	Virgo	16:07	Libra	18:25	Scorpio	20:43	Sagittarius	22:47	Capricorn	00:31	Aquarius	02:00	Pisces	03:27	Aries	05:04	Merc	Sun	Jup	Mars	Ket					Moon	Rah	Ven, Sat
+20-05-2025	2025	May	20	Viswa-vasu	Uttarayana	Vasanta	Vrish	Vaisakha	Krishna	Sapthami	05:53	15:26 - 17:06	Tuesday	Dhan	19:31	Indra	Bava	02:32	04:06			08:03	08:57	14:19	15:12	05:22	18:47	Taurus	07:00	Gemini	09:15	Cancer	11:33	Leo	13:49	Virgo	16:03	Libra	18:21	Scorpio	20:39	Sagittarius	22:43	Capricorn	00:27	Aquarius	01:56	Pisces	03:23	Aries	05:00	Merc	Sun	Jup	Mars	Ket					Moon	Rah	Ven, Sat
+21-05-2025	2025	May	21	Viswa-vasu	Uttarayana	Vasanta	Vrish	Vaisakha	Krishna	Navami	03:23	12:05 - 13:45	Wednesday	Sata	18:56	Vaidhriti	Taitula	01:02	02:33			11:38	12:31			05:22	18:47	Taurus	06:57	Gemini	09:11	Cancer	11:30	Leo	13:45	Virgo	15:59	Libra	18:17	Scorpio	20:35	Sagittarius	22:39	Capricorn	00:23	Aquarius	01:52	Pisces	03:19	Aries	04:56	Merc	Sun	Jup	Mars	Ket						Moon, Rah	Ven, Sat
+22-05-2025	2025	May	22	Viswa-vasu	Uttarayana	Vasanta	Vrish	Vaisakha	Krishna	Dasami	01:13	13:45 - 15:26	Thursday	PBha	17:46	Vishkambha	Vanija	04:53	06:22			15:13	16:07	16:07	17:00	05:21	18:48	Taurus	06:53	Gemini	09:07	Cancer	11:26	Leo	13:41	Virgo	15:55	Libra	18:13	Scorpio	20:31	Sagittarius	22:35	Capricorn	00:19	Aquarius	01:48	Pisces	03:15	Aries	04:52	Merc	Sun	Jup	Mars	Ket						Moon, Rah	Ven, Sat
+23-05-2025	2025	May	23	Viswa-vasu	Uttarayana	Vasanta	Vrish	Vaisakha	Krishna	Ekadasi	22:31	10:24 - 12:05	Friday	UBha	16:01	Priti	Bava	04:53	06:22	02:54	04:21	08:02	08:56	12:32	13:25	05:21	18:48	Taurus	06:49	Gemini	09:03	Cancer	11:22	Leo	13:37	Virgo	15:51	Libra	18:09	Scorpio	20:27	Sagittarius	22:31	Capricorn	00:15	Aquarius	01:44	Pisces	03:11	Aries	04:48	Merc	Sun	Jup	Mars	Ket						Rah	Moon, Ven, Sat
+24-05-2025	2025	May	24	Viswa-vasu	Uttarayana	Vasanta	Vrish	Vaisakha	Krishna	Dwadasi	19:21	8:43 - 10:24	Saturday	Reva	13:47	Ayushman	Kaulava					05:21	06:14	06:14	07:08	05:21	18:49	Taurus	06:45	Gemini	08:59	Cancer	11:18	Leo	13:33	Virgo	15:47	Libra	18:05	Scorpio	20:23	Sagittarius	22:27	Capricorn	00:11	Aquarius	01:40	Pisces	03:07	Aries	04:44		Sun, Merc	Jup	Mars	Ket						Rah	Moon, Ven, Sat
+25-05-2025	2025	May	25	Viswa-vasu	Uttarayana	Vasanta	Vrish	Vaisakha	Krishna	Trayodasi	15:52	17:08 - 18:50	Sunday	Aswi	11:11	Soubhagya	Garija	07:37	09:02	12:36	14:00	17:02	17:56			05:20	18:50	Taurus	06:41	Gemini	08:55	Cancer	11:14	Leo	13:29	Virgo	15:44	Libra	18:01	Scorpio	20:19	Sagittarius	22:23	Capricorn	00:07	Aquarius	01:37	Pisces	03:03	Aries	04:40	Moon	Sun, Merc	Jup	Mars	Ket						Rah	Ven, Sat
+26-05-2025	2025	May	26	Viswa-vasu	Uttarayana	Vasanta	Vrish	Vaisakha	Krishna	Chaturdasi	12:13	7:01 - 8:42	Monday	Bhar	08:22	Sobhana	Sakuna	18:57	20:21			11:38	12:32	15:14	16:08	05:20	18:50	Taurus	06:37	Gemini	08:51	Cancer	11:10	Leo	13:25	Virgo	15:40	Libra	17:57	Scorpio	20:15	Sagittarius	22:19	Capricorn	00:03	Aquarius	01:33	Pisces	03:00	Aries	04:36	Moon	Sun, Merc	Jup	Mars	Ket						Rah	Ven, Sat
+27-05-2025	2025	May	27	Viswa-vasu	Uttarayana	Vasanta	Vrish	Vaisakha	Krishna	Amavasya	08:33	15:28 - 17:09	Tuesday	Krit	05:31	Sukarman	Naga	19:43	21:08			08:02	08:56	14:20	15:14	05:20	18:51	Taurus	06:33	Gemini	08:47	Cancer	11:06	Leo	13:21	Virgo	15:36	Libra	17:53	Scorpio	20:11	Sagittarius	22:15	Capricorn	23:59	Aquarius	01:29	Pisces	02:56	Aries	04:33		Sun, Moon, Merc	Jup	Mars	Ket						Rah	Ven, Sat
+28-05-2025	2025	May	28	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Sukla	Dwitiya	01:55	12:05 - 13:47	Wednesday	Mrig	00:27	Dhriti	Balava	07:52	09:18			11:38	12:32			05:19	18:51	Taurus	06:29	Gemini	08:43	Cancer	11:02	Leo	13:17	Virgo	15:32	Libra	17:49	Scorpio	20:07	Sagittarius	22:12	Capricorn	23:55	Aquarius	01:25	Pisces	02:52	Aries	04:29		Sun, Moon, Merc	Jup	Mars	Ket						Rah	Ven, Sat
+29-05-2025	2025	May	29	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Sukla	Tritiya	23:19	13:47 - 15:28	Thursday	Ardr	22:37	Soola	Taitula	08:13	09:41			15:15	16:09	16:09	17:03	05:19	18:52	Taurus	06:25	Gemini	08:39	Cancer	10:58	Leo	13:13	Virgo	15:28	Libra	17:46	Scorpio	20:03	Sagittarius	22:08	Capricorn	23:51	Aquarius	01:21	Pisces	02:48	Aries	04:25		Sun, Merc	Moon, Jup	Mars	Ket						Rah	Ven, Sat
+30-05-2025	2025	May	30	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Sukla	Chaturthi	21:24	10:24 - 12:05	Friday	Puna	21:27	Ganda	Vanija	10:02	11:34			08:02	08:56	12:33	13:27	05:19	18:52	Taurus	06:21	Gemini	08:35	Cancer	10:54	Leo	13:10	Virgo	15:24	Libra	17:42	Scorpio	19:59	Sagittarius	22:04	Capricorn	23:47	Aquarius	01:17	Pisces	02:44	Aries	04:21		Sun, Merc	Moon, Jup	Mars	Ket						Rah	Ven, Sat
+31-05-2025	2025	May	31	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Sukla	Panchami	20:16	8:42 - 10:24	Saturday	Push	21:06	Vriddhi	Bava	05:20	06:55			05:19	06:13	06:13	07:07	05:19	18:53	Taurus	06:17	Gemini	08:31	Cancer	10:50	Leo	13:06	Virgo	15:20	Libra	17:38	Scorpio	19:55	Sagittarius	22:00	Capricorn	23:44	Aquarius	01:13	Pisces	02:40	Aries	04:17		Sun, Merc	Jup	Moon, Mars	Ket						Rah	Ven, Sat
+01-06-2025	2025	June	1	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Sukla	Shashthi	20:01	17:11 - 18:53	Sunday	Asre	21:35	Dhruva	Kaulava	10:09	11:47			17:04	17:59			05:18	18:53	Taurus	06:13	Gemini	08:27	Cancer	10:46	Leo	13:02	Virgo	15:16	Libra	17:34	Scorpio	19:51	Sagittarius	21:56	Capricorn	23:40	Aquarius	01:09	Pisces	02:36	Aries	04:13	Ven	Sun, Merc	Jup	Moon, Mars	Ket						Rah	Sat
+02-06-2025	2025	June	2	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Sukla	Sapthami	20:36	7:00 - 8:42	Monday	Magh	22:54	Vyaghata	Garija	10:14	11:55			11:39	12:33	15:16	16:10	05:18	18:54	Taurus	06:09	Gemini	08:24	Cancer	10:42	Leo	12:58	Virgo	15:12	Libra	17:30	Scorpio	19:47	Sagittarius	21:52	Capricorn	23:36	Aquarius	01:05	Pisces	02:32	Aries	04:09	Ven	Sun, Merc	Jup	Mars	Moon, Ket						Rah	Sat
+03-06-2025	2025	June	3	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Sukla	Ashtami	21:57	15:30 - 17:12	Tuesday	PPha	00:57	Harshana	Vishti	07:35	09:19	01:23	03:10	08:01	08:56	14:22	15:16	05:18	18:54	Taurus	06:05	Gemini	08:20	Cancer	10:38	Leo	12:54	Virgo	15:08	Libra	17:26	Scorpio	19:44	Sagittarius	21:48	Capricorn	23:32	Aquarius	01:01	Pisces	02:28	Aries	04:05	Ven	Sun, Merc	Jup	Mars	Moon, Ket						Rah	Sat
+04-06-2025	2025	June	4	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Sukla	Navami	23:55	12:06 - 13:48	Wednesday	UPha	03:34	Vajra	Balava					11:39	12:33			05:18	18:54	Taurus	06:01	Gemini	08:16	Cancer	10:35	Leo	12:50	Virgo	15:04	Libra	17:22	Scorpio	19:40	Sagittarius	21:44	Capricorn	23:28	Aquarius	00:57	Pisces	02:24	Aries	04:01	Ven	Sun, Merc	Jup	Mars	Moon, Ket						Rah	Sat
+05-06-2025	2025	June	5	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Sukla	Dasami	02:17	13:49 - 15:31	Thursday	Hast	06:32	Siddhi	Taitula	13:00	14:48			15:17	16:11	16:11	17:06	05:18	18:55	Taurus	05:58	Gemini	08:12	Cancer	10:31	Leo	12:46	Virgo	15:00	Libra	17:18	Scorpio	19:36	Sagittarius	21:40	Capricorn	23:24	Aquarius	00:53	Pisces	02:20	Aries	03:57	Ven	Sun, Merc	Jup	Mars	Ket	Moon					Rah	Sat
+06-06-2025	2025	June	6	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Sukla	Ekadasi	04:49	10:24 - 12:07	Friday	Hast	06:32	Vyatipata	Vanija	15:34	17:22			08:01	08:56	12:34	13:28	05:18	18:55	Taurus	05:54	Gemini	08:08	Cancer	10:27	Leo	12:42	Virgo	14:56	Libra	17:14	Scorpio	19:32	Sagittarius	21:36	Capricorn	23:20	Aquarius	00:49	Pisces	02:16	Aries	03:53	Ven	Sun, Merc	Jup	Mars	Ket	Moon					Rah	Sat
+07-06-2025	2025	June	7	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Sukla	Dwadasi	07:19	8:42 - 10:25	Saturday	Chit	09:38	Variyan	Bava	15:56	17:44			05:18	06:12	06:12	07:07	05:18	18:56	Taurus	05:50	Gemini	08:04	Cancer	10:23	Leo	12:38	Virgo	14:52	Libra	17:10	Scorpio	19:28	Sagittarius	21:32	Capricorn	23:16	Aquarius	00:45	Pisces	02:12	Aries	03:49	Ven	Sun	Merc, Jup		Mars, Ket		Moon				Rah	Sat
+08-06-2025	2025	June	8	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Sukla	Dwadasi	07:19	17:14 - 18:56	Sunday	Swat	12:40	Parigha	Balava	18:55	20:43			17:07	18:02			05:18	18:56	Taurus	05:46	Gemini	08:00	Cancer	10:19	Leo	12:34	Virgo	14:48	Libra	17:06	Scorpio	19:24	Sagittarius	21:28	Capricorn	23:12	Aquarius	00:41	Pisces	02:08	Aries	03:45	Ven	Sun	Merc, Jup		Mars, Ket		Moon				Rah	Sat
+09-06-2025	2025	June	9	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Sukla	Trayodasi	09:37	7:00 - 8:42	Monday	Visa	15:29	Siva	Taitula	19:54	21:40			11:40	12:34	15:18	16:13	05:18	18:57	Taurus	05:42	Gemini	07:56	Cancer	10:15	Leo	12:30	Virgo	14:45	Libra	17:02	Scorpio	19:20	Sagittarius	21:24	Capricorn	23:08	Aquarius	00:38	Pisces	02:04	Aries	03:41	Ven	Sun	Merc, Jup		Mars, Ket		Moon				Rah	Sat
+10-06-2025	2025	June	10	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Sukla	Chaturdasi	11:37	15:32 - 17:15	Tuesday	Anu	18:00	Siddha	Vanija	00:06	01:51			08:02	08:56	14:24	15:18	05:18	18:57	Taurus	05:38	Gemini	07:52	Cancer	10:11	Leo	12:26	Virgo	14:41	Libra	16:58	Scorpio	19:16	Sagittarius	21:20	Capricorn	23:04	Aquarius	00:34	Pisces	02:01	Aries	03:37	Ven	Sun	Merc, Jup		Mars, Ket			Moon			Rah	Sat
+11-06-2025	2025	June	11	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Sukla	Pournimasya	13:14	12:08 - 13:50	Wednesday	Jye	20:09	Sadhya	Bava	04:44	06:27			11:40	12:35			05:18	18:57	Taurus	05:34	Gemini	07:48	Cancer	10:07	Leo	12:22	Virgo	14:37	Libra	16:54	Scorpio	19:12	Sagittarius	21:16	Capricorn	23:00	Aquarius	00:30	Pisces	01:57	Aries	03:34	Ven	Sun	Merc, Jup		Mars, Ket			Moon			Rah	Sat
+12-06-2025	2025	June	12	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Krishna	Pratipat	14:29	13:50 - 15:33	Thursday	Mool	21:55	Subha	Kaulava	04:44	06:27			15:19	16:14	16:14	17:08	05:18	18:58	Taurus	05:30	Gemini	07:44	Cancer	10:03	Leo	12:18	Virgo	14:33	Libra	16:51	Scorpio	19:08	Sagittarius	21:13	Capricorn	22:56	Aquarius	00:26	Pisces	01:53	Aries	03:30	Ven	Sun	Merc, Jup		Mars, Ket				Moon		Rah	Sat
+13-06-2025	2025	June	13	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Krishna	Dwitiya	15:20	10:25 - 12:08	Friday	PSha	23:19	Sukla	Garija	06:23	08:05			08:02	08:57	12:35	13:30	05:18	18:58	Taurus	05:26	Gemini	07:40	Cancer	09:59	Leo	12:14	Virgo	14:29	Libra	16:47	Scorpio	19:04	Sagittarius	21:09	Capricorn	22:52	Aquarius	00:22	Pisces	01:49	Aries	03:26	Ven	Sun	Merc, Jup		Mars, Ket				Moon		Rah	Sat
+14-06-2025	2025	June	14	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Krishna	Tritiya	15:48	8:43 - 10:26	Saturday	USha	00:20	Brahma	Vishti	07:39	09:19	04:26	06:05	05:18	06:13	06:13	07:07	05:18	18:58	Taurus	05:22	Gemini	07:36	Cancer	09:55	Leo	12:11	Virgo	14:25	Libra	16:43	Scorpio	19:00	Sagittarius	21:05	Capricorn	22:48	Aquarius	00:18	Pisces	01:45	Aries	03:22	Ven	Sun	Merc, Jup		Mars, Ket				Moon		Rah	Sat
+15-06-2025	2025	June	15	Viswa-vasu	Uttarayana	Greeshma	Vrish	Jyeshtha	Krishna	Chaturthi	15:52	17:16 - 18:59	Sunday	Srav	00:58	Indra	Balava	04:26	06:05	05:00	06:37	17:09	18:04			05:18	18:59	Taurus	05:18	Gemini	07:32	Cancer	09:51	Leo	12:07	Virgo	14:21	Libra	16:39	Scorpio	18:56	Sagittarius	21:01	Capricorn	22:45	Aquarius	00:14	Pisces	01:41	Aries	03:18	Ven	Sun	Merc, Jup		Mars, Ket					Moon	Rah	Sat
+16-06-2025	2025	June	16	Viswa-vasu	Uttarayana	Greeshma	Mith	Jyeshtha	Krishna	Panchami	15:33	7:01 - 8:43	Monday	Dhan	01:12	Vaidhriti	Taitula	05:00	06:37			11:41	12:36	15:20	16:15	05:18	18:59	Gemini	07:29	Cancer	09:47	Leo	12:03	Virgo	14:17	Libra	16:35	Scorpio	18:52	Sagittarius	20:57	Capricorn	22:41	Aquarius	00:10	Pisces	01:37	Aries	03:14	Taurus	05:10	Ven		Sun, Merc, Jup		Mars, Ket					Moon	Rah	Sat
+17-06-2025	2025	June	17	Viswa-vasu	Uttarayana	Greeshma	Mith	Jyeshtha	Krishna	Shashthi	14:48	15:34 - 17:17	Tuesday	Sata	01:00	Vishkambha	Vanija	08:20	09:56			08:03	08:57	14:26	15:20	05:18	18:59	Gemini	07:25	Cancer	09:43	Leo	11:59	Virgo	14:13	Libra	16:31	Scorpio	18:48	Sagittarius	20:53	Capricorn	22:37	Aquarius	00:06	Pisces	01:33	Aries	03:10	Taurus	05:06	Ven		Sun, Merc, Jup		Mars, Ket						Moon, Rah	Sat
+18-06-2025	2025	June	18	Viswa-vasu	Uttarayana	Greeshma	Mith	Jyeshtha	Krishna	Sapthami	13:36	12:09 - 13:52	Wednesday	PBha	00:21	Priti	Bava	07:14	08:47			11:42	12:36			05:19	18:59	Gemini	07:21	Cancer	09:39	Leo	11:55	Virgo	14:09	Libra	16:27	Scorpio	18:45	Sagittarius	20:49	Capricorn	22:33	Aquarius	00:02	Pisces	01:29	Aries	03:06	Taurus	05:03	Ven		Sun, Merc, Jup		Mars, Ket						Moon, Rah	Sat
+19-06-2025	2025	June	19	Viswa-vasu	Uttarayana	Greeshma	Mith	Jyeshtha	Krishna	Ashtami	11:56	13:52 - 15:34	Thursday	UBha	23:15	Ayushman	Kaulava	11:48	13:20			15:21	16:16	16:16	17:10	05:19	19:00	Gemini	07:17	Cancer	09:36	Leo	11:51	Virgo	14:05	Libra	16:23	Scorpio	18:41	Sagittarius	20:45	Capricorn	22:29	Aquarius	23:58	Pisces	01:25	Aries	03:02	Taurus	04:59	Ven		Sun, Merc, Jup		Mars, Ket						Rah	Moon, Sat
+20-06-2025	2025	June	20	Viswa-vasu	Uttarayana	Greeshma	Mith	Jyeshtha	Krishna	Navami	09:50	10:27 - 12:09	Friday	Reva	21:43	Sobhana	Garija	10:29	11:59			08:03	08:58	12:37	13:32	05:19	19:00	Gemini	07:13	Cancer	09:32	Leo	11:47	Virgo	14:01	Libra	16:19	Scorpio	18:37	Sagittarius	20:41	Capricorn	22:25	Aquarius	23:54	Pisces	01:21	Aries	02:58	Taurus	04:55	Ven		Sun, Merc, Jup		Mars, Ket						Rah	Moon, Sat
+21-06-2025	2025	June	21	Viswa-vasu	Uttarayana	Greeshma	Mith	Jyeshtha	Krishna	Dasami	07:20	8:44 - 10:27	Saturday	Aswi	19:49	Atiganda	Vishti	16:08	17:36	21:16	22:43	05:19	06:14	06:14	07:09	05:19	19:00	Gemini	07:09	Cancer	09:28	Leo	11:43	Virgo	13:57	Libra	16:15	Scorpio	18:33	Sagittarius	20:37	Capricorn	22:21	Aquarius	23:50	Pisces	01:17	Aries	02:54	Taurus	04:51	Moon, Ven		Sun, Merc, Jup		Mars, Ket						Rah	Sat
+22-06-2025	2025	June	22	Viswa-vasu	Uttarayana	Greeshma	Mith	Jyeshtha	Krishna	Dwadasi	01:23	17:18 - 19:00	Sunday	Bhar	17:37	Sukarman	Kaulava	04:26	05:53			17:11	18:06			05:19	19:00	Gemini	07:05	Cancer	09:24	Leo	11:39	Virgo	13:53	Libra	16:11	Scorpio	18:29	Sagittarius	20:33	Capricorn	22:17	Aquarius	23:46	Pisces	01:13	Aries	02:50	Taurus	04:47	Moon, Ven		Sun, Merc, Jup		Mars, Ket						Rah	Sat
+23-06-2025	2025	June	23	Viswa-vasu	Uttarayana	Greeshma	Mith	Jyeshtha	Krishna	Trayodasi	22:11	7:02 - 8:45	Monday	Krit	15:15	Dhriti	Garija	04:26	05:53			11:43	12:37	15:22	16:16	05:20	19:01	Gemini	07:01	Cancer	09:20	Leo	11:35	Virgo	13:49	Libra	16:07	Scorpio	18:25	Sagittarius	20:29	Capricorn	22:13	Aquarius	23:42	Pisces	01:09	Aries	02:46	Taurus	04:43	Ven	Moon	Sun, Jup	Merc	Mars, Ket						Rah	Sat
+24-06-2025	2025	June	24	Viswa-vasu	Uttarayana	Greeshma	Mith	Jyeshtha	Krishna	Chaturdasi	19:00	15:35 - 17:18	Tuesday	Rohi	12:53	Soola	Vishti	05:40	07:07	17:57	19:24	08:04	08:59	14:27	15:22	05:20	19:01	Gemini	06:57	Cancer	09:16	Leo	11:31	Virgo	13:46	Libra	16:03	Scorpio	18:21	Sagittarius	20:25	Capricorn	22:09	Aquarius	23:39	Pisces	01:05	Aries	02:42	Taurus	04:39	Ven	Moon	Sun, Jup	Merc	Mars, Ket						Rah	Sat
+25-06-2025	2025	June	25	Viswa-vasu	Uttarayana	Greeshma	Mith	Jyeshtha	Krishna	Amavasya	16:02	12:10 - 13:53	Wednesday	Mrig	10:39	Ganda	Chatushpada	18:23	19:51			11:43	12:38			05:20	19:01	Gemini	06:53	Cancer	09:12	Leo	11:27	Virgo	13:42	Libra	15:59	Scorpio	18:17	Sagittarius	20:21	Capricorn	22:05	Aquarius	23:35	Pisces	01:02	Aries	02:39	Taurus	04:35	Ven		Sun, Moon, Jup	Merc	Mars, Ket						Rah	Sat
+26-06-2025	2025	June	26	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Sukla	Pratipat	13:25	13:53 - 15:36	Thursday	Ardr	08:45	Dhruva	Bava	20:03	21:33			15:22	16:17	16:17	17:12	05:20	19:01	Gemini	06:49	Cancer	09:08	Leo	11:23	Virgo	13:38	Libra	15:55	Scorpio	18:13	Sagittarius	20:18	Capricorn	22:01	Aquarius	23:31	Pisces	00:58	Aries	02:35	Taurus	04:31	Ven		Sun, Moon, Jup	Merc	Mars, Ket						Rah	Sat
+27-06-2025	2025	June	27	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Sukla	Dwitiya	11:20	10:28 - 12:11	Friday	Puna	07:20	Vyaghata	Kaulava	15:05	16:38			08:05	08:59	12:38	13:33	05:21	19:01	Gemini	06:45	Cancer	09:04	Leo	11:19	Virgo	13:34	Libra	15:52	Scorpio	18:09	Sagittarius	20:14	Capricorn	21:57	Aquarius	23:27	Pisces	00:54	Aries	02:31	Taurus	04:27	Ven		Sun, Jup	Moon, Merc	Mars, Ket						Rah	Sat
+28-06-2025	2025	June	28	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Sukla	Tritiya	09:55	8:46 - 10:29	Saturday	Push	06:34	Harshana	Garija	19:21	20:57			05:21	06:16	06:16	07:10	05:21	19:01	Gemini	06:41	Cancer	09:00	Leo	11:16	Virgo	13:30	Libra	15:48	Scorpio	18:05	Sagittarius	20:10	Capricorn	21:53	Aquarius	23:23	Pisces	00:50	Aries	02:27	Taurus	04:23	Ven		Sun, Jup	Moon, Merc	Mars, Ket						Rah	Sat
+29-06-2025	2025	June	29	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Sukla	Chaturthi	09:16	17:19 - 19:01	Sunday	Asre	06:32	Vajra	Vishti	18:56	20:35			17:12	18:07			05:21	19:01	Gemini	06:37	Cancer	08:56	Leo	11:12	Virgo	13:26	Libra	15:44	Scorpio	18:01	Sagittarius	20:06	Capricorn	21:50	Aquarius	23:19	Pisces	00:46	Aries	02:23	Taurus	04:19	Ven		Sun, Jup	Moon, Merc	Mars, Ket						Rah	Sat
+30-06-2025	2025	June	30	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Sukla	Panchami	09:25	7:04 - 8:47	Monday	Magh	07:19	Siddhi	Balava	15:50	17:32			11:44	12:39	15:23	16:17	05:22	19:01	Gemini	06:33	Cancer	08:52	Leo	11:08	Virgo	13:22	Libra	15:40	Scorpio	17:57	Sagittarius	20:02	Capricorn	21:46	Aquarius	23:15	Pisces	00:42	Aries	02:19	Taurus	04:15		Ven	Sun, Jup	Merc	Moon, Mars, Ket						Rah	Sat
+01-07-2025	2025	July	1	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Sukla	Shashthi	10:22	15:37 - 17:19	Tuesday	PPha	08:52	Vyatipata	Taitula	09:18	11:03			08:06	09:01	14:28	15:23	05:22	19:01	Gemini	06:30	Cancer	08:48	Leo	11:04	Virgo	13:18	Libra	15:36	Scorpio	17:53	Sagittarius	19:58	Capricorn	21:42	Aquarius	23:11	Pisces	00:38	Aries	02:15	Taurus	04:11		Ven	Sun, Jup	Merc	Moon, Mars, Ket						Rah	Sat
+02-07-2025	2025	July	2	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Sukla	Sapthami	12:00	12:12 - 13:54	Wednesday	UPha	11:05	Variyan	Vanija	20:27	22:13			11:45	12:39			05:22	19:01	Gemini	06:26	Cancer	08:44	Leo	11:00	Virgo	13:14	Libra	15:32	Scorpio	17:50	Sagittarius	19:54	Capricorn	21:38	Aquarius	23:07	Pisces	00:34	Aries	02:11	Taurus	04:07		Ven	Sun, Jup	Merc	Mars, Ket	Moon					Rah	Sat
+03-07-2025	2025	July	3	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Sukla	Ashtami	14:08	13:54 - 15:37	Thursday	Hast	13:49	Parigha	Bava	22:48	00:36			15:23	16:18	16:18	17:12	05:23	19:01	Gemini	06:22	Cancer	08:40	Leo	10:56	Virgo	13:10	Libra	15:28	Scorpio	17:46	Sagittarius	19:50	Capricorn	21:34	Aquarius	23:03	Pisces	00:30	Aries	02:07	Taurus	04:04		Ven	Sun, Jup	Merc	Mars, Ket	Moon					Rah	Sat
+04-07-2025	2025	July	4	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Sukla	Navami	16:33	10:30 - 12:12	Friday	Chit	16:48	Siva	Kaulava	23:06	00:54			08:07	09:01	12:39	13:34	05:23	19:01	Gemini	06:18	Cancer	08:37	Leo	10:52	Virgo	13:06	Libra	15:24	Scorpio	17:42	Sagittarius	19:46	Capricorn	21:30	Aquarius	22:59	Pisces	00:26	Aries	02:03	Taurus	04:00		Ven	Sun, Jup	Merc	Mars, Ket		Moon				Rah	Sat
+05-07-2025	2025	July	5	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Sukla	Dasami	19:00	8:48 - 10:30	Saturday	Swat	19:49	Siddha	Taitula	02:05	03:53			05:24	06:18	06:18	07:13	05:24	19:01	Gemini	06:14	Cancer	08:33	Leo	10:48	Virgo	13:02	Libra	15:20	Scorpio	17:38	Sagittarius	19:42	Capricorn	21:26	Aquarius	22:55	Pisces	00:22	Aries	01:59	Taurus	03:56		Ven	Sun, Jup	Merc	Mars, Ket		Moon				Rah	Sat
+06-07-2025	2025	July	6	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Sukla	Ekadasi	21:16	17:19 - 19:01	Sunday	Visa	22:40	Sadhya	Vanija	03:05	04:51			17:12	18:07			05:24	19:01	Gemini	06:10	Cancer	08:29	Leo	10:44	Virgo	12:58	Libra	15:16	Scorpio	17:34	Sagittarius	19:38	Capricorn	21:22	Aquarius	22:51	Pisces	00:18	Aries	01:55	Taurus	03:52		Ven	Sun, Jup	Merc	Mars, Ket		Moon				Rah	Sat
+07-07-2025	2025	July	7	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Sukla	Dwadasi	23:11	7:06 - 8:49	Monday	Anu	01:10	Subha	Bava					11:45	12:40	15:23	16:18	05:24	19:01	Gemini	06:06	Cancer	08:25	Leo	10:40	Virgo	12:54	Libra	15:12	Scorpio	17:30	Sagittarius	19:34	Capricorn	21:18	Aquarius	22:47	Pisces	00:14	Aries	01:51	Taurus	03:48		Ven	Sun, Jup	Merc	Mars, Ket			Moon			Rah	Sat
+08-07-2025	2025	July	8	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Sukla	Trayodasi	00:39	15:37 - 17:19	Tuesday	Jye	03:13	Sukla	Kaulava	07:15	08:59			08:08	09:02	14:29	15:23	05:25	19:01	Gemini	06:02	Cancer	08:21	Leo	10:36	Virgo	12:51	Libra	15:08	Scorpio	17:26	Sagittarius	19:30	Capricorn	21:14	Aquarius	22:44	Pisces	00:10	Aries	01:47	Taurus	03:44		Ven	Sun, Jup	Merc	Mars, Ket			Moon			Rah	Sat
+09-07-2025	2025	July	9	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Sukla	Chaturdasi	01:38	12:13 - 13:55	Wednesday	Mool	04:48	Brahma	Garija	11:45	13:27			11:46	12:40			05:25	19:01	Gemini	05:58	Cancer	08:17	Leo	10:32	Virgo	12:47	Libra	15:04	Scorpio	17:22	Sagittarius	19:26	Capricorn	21:10	Aquarius	22:40	Pisces	00:07	Aries	01:43	Taurus	03:40		Ven	Sun, Jup	Merc	Mars, Ket				Moon		Rah	Sat
+10-07-2025	2025	July	10	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Sukla	Pournimasya	02:07	13:55 - 15:37	Thursday	PSha	05:54	Indra	Vishti	13:10	14:50			15:23	16:18	16:18	17:12	05:26	19:01	Gemini	05:54	Cancer	08:13	Leo	10:28	Virgo	12:43	Libra	15:00	Scorpio	17:18	Sagittarius	19:22	Capricorn	21:06	Aquarius	22:36	Pisces	00:03	Aries	01:40	Taurus	03:36		Ven	Sun, Jup	Merc	Mars, Ket				Moon		Rah	Sat
+11-07-2025	2025	July	11	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Krishna	Pratipat	02:09	10:31 - 12:13	Friday	PSha	05:54	Vaidhriti	Balava	14:08	15:46			08:09	09:03	12:40	13:35	05:26	19:00	Gemini	05:50	Cancer	08:09	Leo	10:24	Virgo	12:39	Libra	14:56	Scorpio	17:14	Sagittarius	19:19	Capricorn	21:02	Aquarius	22:32	Pisces	23:59	Aries	01:36	Taurus	03:32		Ven	Sun, Jup	Merc	Mars, Ket				Moon		Rah	Sat
+12-07-2025	2025	July	12	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Krishna	Dwitiya	01:47	8:50 - 10:32	Saturday	USha	06:34	Vishkambha	Taitula	10:37	12:14			05:27	06:21	06:21	07:15	05:27	19:00	Gemini	05:46	Cancer	08:05	Leo	10:20	Virgo	12:35	Libra	14:53	Scorpio	17:10	Sagittarius	19:15	Capricorn	20:58	Aquarius	22:28	Pisces	23:55	Aries	01:32	Taurus	03:28		Ven	Sun, Jup	Merc	Mars, Ket					Moon	Rah	Sat
+13-07-2025	2025	July	13	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Krishna	Tritiya	01:04	17:18 - 19:00	Sunday	Srav	06:51	Priti	Vanija	10:51	12:26			17:12	18:06			05:27	19:00	Gemini	05:42	Cancer	08:01	Leo	10:17	Virgo	12:31	Libra	14:49	Scorpio	17:06	Sagittarius	19:11	Capricorn	20:54	Aquarius	22:24	Pisces	23:51	Aries	01:28	Taurus	03:24		Ven	Sun, Jup	Merc	Mars, Ket					Moon	Rah	Sat
+14-07-2025	2025	July	14	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Krishna	Chaturthi	00:01	7:09 - 8:51	Monday	Dhan	06:47	Ayushman	Bava	13:52	15:27			11:47	12:41	15:23	16:17	05:27	19:00	Gemini	05:38	Cancer	07:57	Leo	10:13	Virgo	12:27	Libra	14:45	Scorpio	17:02	Sagittarius	19:07	Capricorn	20:51	Aquarius	22:20	Pisces	23:47	Aries	01:24	Taurus	03:20		Ven	Sun, Jup	Merc	Mars, Ket						Moon, Rah	Sat
+15-07-2025	2025	July	15	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Krishna	Panchami	22:40	15:37 - 17:18	Tuesday	Sata	06:25	Soubhagya	Kaulava	12:38	14:11			08:10	09:04	14:29	15:23	05:28	18:59	Gemini	05:34	Cancer	07:53	Leo	10:09	Virgo	12:23	Libra	14:41	Scorpio	16:58	Sagittarius	19:03	Capricorn	20:47	Aquarius	22:16	Pisces	23:43	Aries	01:20	Taurus	03:16		Ven	Sun, Jup	Merc	Mars, Ket						Moon, Rah	Sat
+16-07-2025	2025	July	16	Viswa-vasu	Uttarayana	Greeshma	Mith	Ashadha	Krishna	Shashthi	21:03	12:14 - 13:55	Wednesday	PBha	05:45	Sobhana	Garija	17:17	18:49			11:47	12:41			05:28	18:59	Gemini	05:31	Cancer	07:49	Leo	10:05	Virgo	12:19	Libra	14:37	Scorpio	16:54	Sagittarius	18:59	Capricorn	20:43	Aquarius	22:12	Pisces	23:39	Aries	01:16	Taurus	03:12		Ven	Sun, Jup	Merc	Mars, Ket						Rah	Moon, Sat
+17-07-2025	2025	July	17	Viswa-vasu	Dakshinayana	Greeshma	Kark	Ashadha	Krishna	Sapthami	19:10	13:55 - 15:36	Thursday	Reva	03:37	Atiganda	Vishti	16:13	17:44			15:23	16:17	16:17	17:11	05:29	18:59	Cancer	07:45	Leo	10:01	Virgo	12:15	Libra	14:33	Scorpio	16:51	Sagittarius	18:55	Capricorn	20:39	Aquarius	22:08	Pisces	23:35	Aries	01:12	Taurus	03:08	Gemini	05:23		Ven	Jup	Sun, Merc	Mars, Ket						Rah	Moon, Sat
+18-07-2025	2025	July	18	Viswa-vasu	Dakshinayana	Greeshma	Kark	Ashadha	Krishna	Ashtami	17:03	10:33 - 12:14	Friday	Aswi	02:12	Sukarman	Balava	22:26	23:57	03:42	05:11	08:11	09:05	12:41	13:35	05:29	18:59	Cancer	07:42	Leo	09:57	Virgo	12:11	Libra	14:29	Scorpio	16:47	Sagittarius	18:51	Capricorn	20:35	Aquarius	22:04	Pisces	23:31	Aries	01:08	Taurus	03:05	Gemini	05:19	Moon	Ven	Jup	Sun, Merc	Mars, Ket						Rah	Sat
+19-07-2025	2025	July	19	Viswa-vasu	Dakshinayana	Greeshma	Kark	Ashadha	Krishna	Navami	14:43	8:52 - 10:33	Saturday	Bhar	00:36	Soola	Garija					05:30	06:24	06:24	07:18	05:30	18:58	Cancer	07:38	Leo	09:53	Virgo	12:07	Libra	14:25	Scorpio	16:43	Sagittarius	18:47	Capricorn	20:31	Aquarius	22:00	Pisces	23:27	Aries	01:04	Taurus	03:01	Gemini	05:15	Moon	Ven	Jup	Sun, Merc	Mars, Ket						Rah	Sat
+20-07-2025	2025	July	20	Viswa-vasu	Dakshinayana	Greeshma	Kark	Ashadha	Krishna	Dasami	12:14	17:17 - 18:58	Sunday	Krit	22:52	Ganda	Vishti	11:44	13:13			17:10	18:04			05:30	18:58	Cancer	07:34	Leo	09:49	Virgo	12:03	Libra	14:21	Scorpio	16:39	Sagittarius	18:43	Capricorn	20:27	Aquarius	21:56	Pisces	23:23	Aries	01:00	Taurus	02:57	Gemini	05:11	Moon	Ven	Jup	Sun, Merc	Mars, Ket						Rah	Sat
+21-07-2025	2025	July	21	Viswa-vasu	Dakshinayana	Greeshma	Kark	Ashadha	Krishna	Ekadasi	09:40	12:14 - 13:55	Monday	Rohi	20:53	Vriddhi	Balava	05:00	06:26			11:48	12:42	15:24	16:18	05:31	18:58	Cancer	07:30	Leo	09:45	Virgo	11:59	Libra	14:17	Scorpio	16:35	Sagittarius	18:39	Capricorn	20:23	Aquarius	21:52	Pisces	23:19	Aries	00:56	Taurus	02:53	Gemini	05:07	Moon	Ven	Jup	Sun, Merc	Mars, Ket						Rah	Sat
+22-07-2025	2025	July	22	Viswa-vasu	Dakshinayana	Greeshma	Kark	Ashadha	Krishna	Dwadasi	07:05	8:53 - 10:34	Tuesday	Mrig	18:17	Dhruva	Kaulava	05:00	06:26			08:12	09:06	14:30	15:24	05:31	18:57	Cancer	07:26	Leo	09:41	Virgo	11:55	Libra	14:13	Scorpio	16:31	Sagittarius	18:35	Capricorn	20:19	Aquarius	21:48	Pisces	23:15	Aries	00:52	Taurus	02:49	Gemini	05:03	Moon	Ven	Jup	Sun, Merc	Mars, Ket						Rah	Sat
+23-07-2025	2025	July	23	Viswa-vasu	Dakshinayana	Greeshma	Kark	Ashadha	Krishna	Trayodasi	04:44	15:36 - 17:17	Wednesday	Ardr	15:36	Vyaghata	Garija	10:04	11:32			11:48	12:42			05:32	18:57	Cancer	07:22	Leo	09:37	Virgo	11:51	Libra	14:09	Scorpio	16:27	Sagittarius	18:31	Capricorn	20:15	Aquarius	21:44	Pisces	23:11	Aries	00:48	Taurus	02:45	Gemini	04:59	Moon	Ven	Jup	Sun, Merc	Mars, Ket						Rah	Sat
+24-07-2025	2025	July	24	Viswa-vasu	Dakshinayana	Greeshma	Kark	Ashadha	Krishna	Chaturdasi	02:49	12:14 - 13:55	Thursday	Puna	13:02	Harshana	Vishti	10:04	11:32			15:24	16:18	16:18	17:12	05:32	18:56	Cancer	07:18	Leo	09:33	Virgo	11:47	Libra	14:05	Scorpio	16:23	Sagittarius	18:27	Capricorn	20:11	Aquarius	21:40	Pisces	23:07	Aries	00:44	Taurus	02:41	Gemini	04:55	Moon	Ven	Jup	Sun, Merc	Mars, Ket						Rah	Sat
+25-07-2025	2025	July	25	Viswa-vasu	Dakshinayana	Greeshma	Kark	Shravana	Sukla	Pratipat	01:21	13:55 - 15:36	Friday	Push	10:48	Vajra	Balava	14:52	16:19			08:13	09:07	12:42	13:36	05:33	18:56	Cancer	07:14	Leo	09:29	Virgo	11:43	Libra	14:01	Scorpio	16:19	Sagittarius	18:23	Capricorn	20:07	Aquarius	21:36	Pisces	23:03	Aries	00:40	Taurus	02:37	Gemini	04:51	Moon	Ven	Jup	Sun, Merc	Mars, Ket						Rah	Sat
+26-07-2025	2025	July	26	Viswa-vasu	Dakshinayana	Greeshma	Kark	Shravana	Sukla	Dwitiya	00:23	10:35 - 12:16	Saturday	Asre	08:58	Siddhi	Taitula	14:52	16:19			05:33	06:27	06:27	07:21	05:33	18:55	Cancer	07:10	Leo	09:25	Virgo	11:39	Libra	13:57	Scorpio	16:15	Sagittarius	18:19	Capricorn	20:03	Aquarius	21:32	Pisces	22:59	Aries	00:36	Taurus	02:33	Gemini	04:47	Moon	Ven	Jup	Sun, Merc	Mars, Ket						Rah	Sat
+27-07-2025	2025	July	27	Viswa-vasu	Dakshinayana	Greeshma	Kark	Shravana	Sukla	Tritiya	23:55	8:54 - 10:35	Sunday	Magh	07:37	Vyatipata	Vanija	18:00	19:28			17:10	18:04			05:34	18:55	Cancer	07:06	Leo	09:21	Virgo	11:35	Libra	13:53	Scorpio	16:11	Sagittarius	18:15	Capricorn	19:59	Aquarius	21:28	Pisces	22:55	Aries	00:32	Taurus	02:29	Gemini	04:43	Moon	Ven	Jup	Sun, Merc	Mars, Ket						Rah	Sat
+28-07-2025	2025	July	28	Viswa-vasu	Dakshinayana	Greeshma	Kark	Shravana	Sukla	Chaturthi	23:57	17:16 - 18:56	Monday	PPha	06:49	Variyan	Bava	21:18	22:46			11:49	12:43	15:24	16:18	05:34	18:54	Cancer	07:02	Leo	09:17	Virgo	11:31	Libra	13:49	Scorpio	16:07	Sagittarius	18:11	Capricorn	19:55	Aquarius	21:24	Pisces	22:51	Aries	00:28	Taurus	02:25	Gemini	04:39	Moon	Ven	Jup	Sun, Merc	Mars, Ket						Rah	Sat
+29-07-2025	2025	July	29	Viswa-vasu	Dakshinayana	Greeshma	Kark	Shravana	Sukla	Panchami	00:29	7:11 - 8:55	Tuesday	UPha	06:36	Parigha	Kaulava	21:18	22:46			08:14	09:08	14:30	15:24	05:35	18:54	Cancer	06:58	Leo	09:13	Virgo	11:27	Libra	13:45	Scorpio	16:03	Sagittarius	18:07	Capricorn	19:51	Aquarius	21:20	Pisces	22:47	Aries	00:24	Taurus	02:21	Gemini	04:35	Moon	Ven	Jup	Sun, Merc	Mars, Ket						Rah	Sat
+30-07-2025	2025	July	30	Viswa-vasu	Dakshinayana	Greeshma	Kark	Shravana	Sukla	Shashthi	01:29	15:36 - 17:16	Wednesday	Hast	07:00	Siva	Garija	00:00	01:27			11:49	12:43			05:35	18:53	Cancer	06:54	Leo	09:09	Virgo	11:23	Libra	13:41	Scorpio	15:59	Sagittarius	18:03	Capricorn	19:47	Aquarius	21:16	Pisces	22:43	Aries	00:20	Taurus	02:17	Gemini	04:31	Moon	Ven	Jup	Sun, Merc	Mars, Ket						Rah	Sat
+31-07-2025	2025	July	31	Viswa-vasu	Dakshinayana	Greeshma	Kark	Shravana	Sukla	Sapthami	02:55	12:16 - 13:56	Thursday	Chit	07:59	Siddha	Vishti	00:00	01:27			15:24	16:18	16:18	17:12	05:36	18:53	Cancer	06:50	Leo	09:05	Virgo	11:19	Libra	13:37	Scorpio	15:55	Sagittarius	17:59	Capricorn	19:43	Aquarius	21:12	Pisces	22:39	Aries	00:16	Taurus	02:13	Gemini	04:27	Moon	Ven	Jup	Sun, Merc	Mars, Ket						Rah	Sat
+`;
+
+        // Function to show the message box (replaces alert/confirm)
+        function showMessageBox(type, message) {
+            const messageBox = document.createElement('div');
+            messageBox.className = 'message-box'; // Use custom class
+            messageBox.innerHTML = `
+                <div class="message-box-content">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">${type}</h3>
+                    <p class="text-gray-600 mb-6">${message}</p>
+                    <button id="close-message-box" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">
+                        OK
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(messageBox);
+
+            document.getElementById('close-message-box').addEventListener('click', () => {
+                document.body.removeChild(messageBox);
+            });
+        }
+
+        // Function to parse the raw text data into an array of objects
+        function parsePanchangaData(rawData) {
+            const lines = rawData.trim().split('\n');
+            const headers = lines[0].split('\t').map(h => h.trim()); // Trim headers
+
+            const dataRows = lines.slice(1);
+
+            return dataRows.map(row => {
+                const values = row.split('\t').map(v => v.trim()); // Trim values
+                const rowObject = {};
+                headers.forEach((header, index) => {
+                    rowObject[header] = values[index] === '' ? 'N/A' : values[index]; // Handle empty strings
+                });
+                return rowObject;
+            });
+        }
+
+        const parsedPanchangaData = parsePanchangaData(rawPanchangaData);
+
+        // Map column headers to display names for planets
+        const zodiacSignMap = {
+            "1_Mesham": "Aries", "2_Vrushabham": "Taurus", "3_Mithunam": "Gemini",
+            "4_Karkatakam": "Cancer", "5_Simham": "Leo", "6_Kanya": "Virgo",
+            "7_Tula": "Libra", "8_Vruschikam": "Scorpio", "9_Dhanur": "Sagittarius",
+            "10_Makaram": "Capricorn", "11_Kumbham": "Aquarius", "12_Meenam": "Pisces"
+        };
+
+        // Astrological symbols for watermark
+        const astrologicalSymbols = {
+            "Aries": "♈", "Taurus": "♉", "Gemini": "♊", "Cancer": "♋",
+            "Leo": "♌", "Virgo": "♍", "Libra": "♎", "Scorpio": "♏",
+            "Sagittarius": "♐", "Capricorn": "♑", "Aquarius": "♒", "Pisces": "♓"
+        };
+
+        // Map for full Nakshatra names
+        const nakshatraMap = {
+            "Mrig": "Mrigashirsha",
+            "Ardr": "Ardra",
+            "Puna": "Punarvasu",
+            "Push": "Pushya",
+            "Asre": "Ashlesha",
+            "Magh": "Magha",
+            "PPha": "Purva Phalguni",
+            "UPha": "Uttara Phalguni",
+            "Hast": "Hasta",
+            "Chit": "Chitra",
+            "Swat": "Swati",
+            "Visa": "Vishakha",
+            "Anu": "Anuradha",
+            "Jye": "Jyeshtha",
+            "Mool": "Moola",
+            "PSha": "Purva Ashadha",
+            "USha": "Uttara Ashadha",
+            "Srav": "Shravana",
+            "Dhan": "Dhanishta",
+            "Sata": "Shatabhisha",
+            "PBha": "Purva Bhadrapada",
+            "UBha": "Uttara Bhadrapada",
+            "Reva": "Revati",
+            "Aswi": "Ashwini",
+            "Bhar": "Bharani",
+            "Krit": "Krittika",
+            "Rohi": "Rohini"
+        };
+
+        // Function to draw the circular horoscope chart
+        function drawHoroscopeChart(planetsData) {
+            const canvas = document.getElementById('horoscope-chart');
+            const ctx = canvas.getContext('2d');
+
+            // Make canvas responsive based on its container
+            const containerWidth = canvas.parentElement.clientWidth;
+            const size = Math.min(containerWidth, 400); // Max size 400px, but responsive
+            canvas.width = size;
+            canvas.height = size;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const outerRadius = (Math.min(canvas.width, canvas.height) / 2) * 0.9; // 90% of half width/height
+            const innerCircleRadius = outerRadius * 0.2; // Radius for the innermost circle
+
+            // Draw astrological symbols as watermark
+            ctx.globalAlpha = 0.05; // Very subtle opacity
+            ctx.fillStyle = '#312e81'; // Darker indigo color for watermark
+            ctx.font = `${outerRadius * 0.2}px Arial`; // Larger font for symbols
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const watermarkRadius = outerRadius * 0.7; // Radius for watermark symbols
+            const watermarkAngleSlice = (Math.PI * 2) / 12;
+
+            for (let i = 0; i < 12; i++) {
+                const angle = watermarkAngleSlice * i + Math.PI / 12; // Offset to center in segment
+                const x = centerX + watermarkRadius * Math.cos(angle);
+                const y = centerY + watermarkRadius * Math.sin(angle);
+                ctx.fillText(Object.values(astrologicalSymbols)[i], x, y);
+            }
+            ctx.globalAlpha = 1.0; // Reset opacity for main drawing
+
+            // Draw outer circle
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = '#6366f1'; // Indigo-500
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw inner circle for center
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, innerCircleRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = '#a78bfa'; // Purple-400
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Zodiac signs and their order (starting from Aries at 0 degrees, counter-clockwise)
+            const zodiacOrder = [
+                "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+                "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"
+            ];
+
+            // Draw zodiac divisions and names
+            const angleSlice = (Math.PI * 2) / 12; // 30 degrees per sign
+            ctx.font = `${Math.max(10, outerRadius * 0.07)}px Inter`; // Responsive font size
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#e0e7ff'; // Light indigo text
+
+            const signTextRadius = outerRadius * 0.9; // Position for sign names
+
+            zodiacOrder.forEach((sign, index) => {
+                // Calculate angle for the start of the segment. Aries is at 0 degrees (right),
+                // so we shift by -PI/2 to put it at the top.
+                const angle = angleSlice * index - Math.PI / 2;
+                const midAngle = angle + angleSlice / 2; // Midpoint of the segment for text and planets
+
+                // Draw radial lines
+                ctx.beginPath();
+                ctx.moveTo(centerX + outerRadius * Math.cos(angle), centerY + outerRadius * Math.sin(angle));
+                ctx.lineTo(centerX + innerCircleRadius * Math.cos(angle), centerY + innerCircleRadius * Math.sin(angle));
+                ctx.strokeStyle = '#8b5cf6'; // Purple-500
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Position for sign name
+                const signX = centerX + signTextRadius * Math.cos(midAngle);
+                const signY = centerY + signTextRadius * Math.sin(midAngle);
+
+                // Draw sign name
+                ctx.save(); // Save context state before rotating
+                ctx.translate(signX, signY);
+                ctx.fillText(sign, 0, 0);
+                ctx.restore(); // Restore context state
+            });
+
+            // Draw planets
+            ctx.font = `${Math.max(10, outerRadius * 0.06)}px Inter`; // Smaller font for planets
+            ctx.fillStyle = '#fff'; // White text for planets
+
+            // Group planets by sign to handle multiple planets in one segment
+            const planetsBySign = {};
+            planetsData.forEach(p => {
+                if (!planetsBySign[p.sign]) {
+                    planetsBySign[p.sign] = [];
+                }
+                planetsBySign[p.sign].push(p.planet);
+            });
+
+            // Position planets within their segments
+            const planetStartRadius = outerRadius * 0.55; // Starting radius for planets
+            const planetSpacing = outerRadius * 0.08; // Vertical spacing for multiple planets
+
+            for (const sign of zodiacOrder) {
+                if (planetsBySign[sign] && planetsBySign[sign].length > 0) {
+                    const signIndex = zodiacOrder.indexOf(sign);
+                    const baseAngle = angleSlice * signIndex - Math.PI / 2; // Start of the segment
+                    const midAngle = baseAngle + angleSlice / 2; // Middle of the segment
+
+                    const planetsInThisSign = planetsBySign[sign];
+                    
+                    // Calculate a dynamic starting offset to center multiple planets vertically
+                    const totalPlanetHeight = (planetsInThisSign.length - 1) * planetSpacing;
+                    const initialVerticalOffset = -totalPlanetHeight / 2;
+
+                    planetsInThisSign.forEach((planet, pIndex) => {
+                        // Calculate position along the mid-angle of the segment
+                        const currentRadius = planetStartRadius + (pIndex * planetSpacing) + initialVerticalOffset;
+                        const x = centerX + currentRadius * Math.cos(midAngle);
+                        const y = centerY + currentRadius * Math.sin(midAngle);
+
+                        ctx.fillText(planet, x, y);
+                    });
+                }
+            }
+
+            // Display message if no planetary data
+            if (planetsData.length === 0) {
+                ctx.fillStyle = '#e0e7ff';
+                ctx.font = `${Math.max(12, outerRadius * 0.08)}px Inter`;
+                ctx.fillText("No planetary data for this date", centerX, centerY - 10);
+                ctx.fillText("in the provided CSV.", centerX, centerY + 15);
+            }
+        }
+
+        // Function to update the astrology information display and load diary entry from local storage
+        function updateAstrologyInfo(selectedDateStr) {
+            // Convert selectedDateStr (YYYY-MM-DD) to DD-MM-YYYY for lookup in raw data
+            const [year, month, day] = selectedDateStr.split('-');
+            const lookupDate = `${day}-${month}-${year}`;
+
+            const entryFromRawData = parsedPanchangaData.find(row => row['Gregorian Date'] === lookupDate);
+
+            const tithiDisplay = document.getElementById('tithi-display');
+            const vaarDisplay = document.getElementById('vaar-display');
+            const nakshatraDisplay = document.getElementById('nakshatra-display');
+            const yogaDisplay = document.getElementById('yoga-display');
+            const karanaDisplay = document.getElementById('karana-display');
+            const currentDateDisplay = document.getElementById('current-date-display');
+            const dailyObservationsTextarea = document.getElementById('daily-observations');
+            const reflectionsInterpretationsTextarea = document.getElementById('reflections-interpretations');
+
+
+            const planetsForChart = []; // Array to hold structured planet data for the chart
+
+            if (entryFromRawData) {
+                // Manually format date for display as "Name of month DD,YYYY"
+                const dateObj = new Date(selectedDateStr);
+                const options = { month: 'long', day: '2-digit', year: 'numeric' };
+                const formattedDate = dateObj.toLocaleDateString('en-US', options);
+                // Re-arrange to "Name of month DD, YYYY"
+                const [monthName, dayNum, yearNum] = formattedDate.replace(',', '').split(' ');
+                currentDateDisplay.textContent = `${monthName} ${dayNum}, ${yearNum}`;
+
+
+                tithiDisplay.textContent = `${entryFromRawData['Paksha']} ${entryFromRawData['Tithi']}`;
+                vaarDisplay.textContent = entryFromRawData['Day'];
+                // Use the nakshatraMap to get the full name
+                nakshatraDisplay.textContent = nakshatraMap[entryFromRawData['Nakshatra']] || entryFromRawData['Nakshatra'];
+                yogaDisplay.textContent = entryFromRawData['Yoga'];
+                karanaDisplay.textContent = entryFromRawData['Karana'];
+
+                // Populate planetsForChart array from raw data
+                for (const colHeader in zodiacSignMap) {
+                    if (entryFromRawData.hasOwnProperty(colHeader)) {
+                        const planetsInSign = entryFromRawData[colHeader];
+                        if (planetsInSign && planetsInSign !== 'N/A') {
+                            const signName = zodiacSignMap[colHeader];
+                            const planetsArray = planetsInSign.split(',').map(p => p.trim()).filter(p => p);
+                            planetsArray.forEach(planet => {
+                                if (planet) {
+                                    planetsForChart.push({ planet: planet, sign: signName });
+                                }
+                            });
+                        }
+                    }
+                }
+                console.log('Planets for chart on', selectedDateStr, ':', planetsForChart); // Log planetary data
+                drawHoroscopeChart(planetsForChart); // Draw the chart with collected data
+
+            } else {
+                // If data for the selected date is not found in raw data
+                const dateObj = new Date(selectedDateStr);
+                const options = { month: 'long', day: '2-digit', year: 'numeric' };
+                const formattedDate = dateObj.toLocaleDateString('en-US', options);
+                const [monthName, dayNum, yearNum] = formattedDate.replace(',', '').split(' ');
+                currentDateDisplay.textContent = `${monthName} ${dayNum}, ${yearNum}`;
+
+                tithiDisplay.textContent = 'N/A';
+                vaarDisplay.textContent = 'N/A';
+                nakshatraDisplay.textContent = 'N/A';
+                yogaDisplay.textContent = 'N/A';
+                karanaDisplay.textContent = 'N/A';
+                console.log('No raw Panchanga data found for', selectedDateStr);
+                drawHoroscopeChart([]); // Draw an empty chart or with "No data" message
+            }
+
+            // Load diary entry from Local Storage
+            const savedEntries = JSON.parse(localStorage.getItem('diaryEntries') || '{}');
+            const entry = savedEntries[selectedDateStr];
+            if (entry) {
+                dailyObservationsTextarea.value = entry.dailyObservations || '';
+                reflectionsInterpretationsTextarea.value = entry.reflectionsInterpretations || '';
+                console.log('Content loaded for date', selectedDateStr, ':', entry);
+            } else {
+                dailyObservationsTextarea.value = ''; // Clear if no entry exists
+                reflectionsInterpretationsTextarea.value = ''; // Clear if no entry exists
+                console.log('No content found for date', selectedDateStr);
+            }
+        }
+
+        // Function to save diary entry to Local Storage
+        function saveEntry() {
+            const selectedDate = document.getElementById('date-selector').value;
+            const dailyObservationsContent = document.getElementById('daily-observations').value;
+            const reflectionsInterpretationsContent = document.getElementById('reflections-interpretations').value;
+
+            console.log('Attempting to save content for date', selectedDate, 'Daily Observations:', dailyObservationsContent, 'Reflections:', reflectionsInterpretationsContent);
+
+            if (!selectedDate) {
+                showMessageBox("Error", "Please select a date to save your entry.");
+                return;
+            }
+
+            // Get current Panchanga details to save along with the diary entry
+            const currentPanchanga = {};
+            const [year, month, day] = selectedDate.split('-');
+            const lookupDate = `${day}-${month}-${year}`;
+            const entryFromRawData = parsedPanchangaData.find(row => row['Gregorian Date'] === lookupDate);
+
+            if (entryFromRawData) {
+                currentPanchanga.tithi = `${entryFromRawData['Paksha']} ${entryFromRawData['Tithi']}`;
+                currentPanchanga.vaar = entryFromRawData['Day'];
+                currentPanchanga.nakshatra = nakshatraMap[entryFromRawData['Nakshatra']] || entryFromRawData['Nakshatra'];
+                currentPanchanga.yoga = entryFromRawData['Yoga'];
+                currentPanchanga.karana = entryFromRawData['Karana'];
+
+                const planetsForSave = [];
+                for (const colHeader in zodiacSignMap) {
+                    if (entryFromRawData.hasOwnProperty(colHeader)) {
+                        const planetsInSign = entryFromRawData[colHeader];
+                        if (planetsInSign && planetsInSign !== 'N/A') {
+                            const signName = zodiacSignMap[colHeader];
+                            const planetsArray = planetsInSign.split(',').map(p => p.trim()).filter(p => p);
+                            planetsArray.forEach(planet => {
+                                if (planet) {
+                                    planetsForSave.push({ planet: planet, sign: signName });
+                                }
+                            });
+                        }
+                    }
+                }
+                currentPanchanga.planetaryPositions = planetsForSave; // Store as array of objects
+            } else {
+                // If no Panchanga data found for the date, save as N/A
+                currentPanchanga.tithi = 'N/A';
+                currentPanchanga.vaar = 'N/A';
+                currentPanchanga.nakshatra = 'N/A';
+                currentPanchanga.yoga = 'N/A';
+                currentPanchanga.karana = 'N/A';
+                currentPanchanga.planetaryPositions = [];
+            }
+
+            // Load existing entries, add/update the current one, and save back
+            const savedEntries = JSON.parse(localStorage.getItem('diaryEntries') || '{}');
+            savedEntries[selectedDate] = {
+                dailyObservations: dailyObservationsContent,
+                reflectionsInterpretations: reflectionsInterpretationsContent,
+                panchangaDetails: currentPanchanga
+            };
+            try {
+                localStorage.setItem('diaryEntries', JSON.stringify(savedEntries));
+                showMessageBox("Success", "Diary entry saved successfully to your browser!");
+                console.log('Successfully saved entry for date', selectedDate);
+            } catch (e) {
+                showMessageBox("Error", "Failed to save entry. Local storage might be full or unavailable.");
+                console.error('Error saving to local storage:', e);
+            }
+        }
+
+        // Function to download all diary entries from Local Storage
+        function downloadAllEntries() {
+            const savedEntries = JSON.parse(localStorage.getItem('diaryEntries') || '{}');
+            const entryDates = Object.keys(savedEntries).sort(); // Sort entries by date
+
+            if (entryDates.length === 0) {
+                showMessageBox("Info", "No diary entries found to download.");
+                return;
+            }
+
+            let csvContent = "Date,Daily Observations,Reflections/Interpretations,Tithi,Vaar,Nakshatra,Yoga,Karana,Planetary Positions\n";
+
+            entryDates.forEach((date) => {
+                const data = savedEntries[date];
+                // Ensure diary entries are correctly escaped for CSV, including newlines
+                const dailyObservations = data.dailyObservations ? `"${data.dailyObservations.replace(/"/g, '""')}"` : '""';
+                const reflectionsInterpretations = data.reflectionsInterpretations ? `"${data.reflectionsInterpretations.replace(/"/g, '""')}"` : '""';
+                
+                const panchanga = data.panchangaDetails || {};
+                const tithi = panchanga.tithi || 'N/A';
+                const vaar = panchanga.vaar || 'N/A';
+                const nakshatra = panchanga.nakshatra || 'N/A'; // Already full name if available
+                const yoga = panchanga.yoga || 'N/A';
+                const karana = panchanga.karana || 'N/A';
+                
+                let planetaryPositions = 'N/A';
+                if (panchanga.planetaryPositions && Array.isArray(panchanga.planetaryPositions)) {
+                    planetaryPositions = panchanga.planetaryPositions.map(p => `${p.planet} in ${p.sign}`).join('; ');
+                    planetaryPositions = `"${planetaryPositions.replace(/"/g, '""')}"`; // Escape quotes
+                } else {
+                    planetaryPositions = '""';
+                }
+
+                csvContent += `${date},${dailyObservations},${reflectionsInterpretations},${tithi},${vaar},${nakshatra},${yoga},${karana},${planetaryPositions}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `all_diary_entries.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showMessageBox("Success", "All diary entries downloaded successfully!");
+        }
+
+        // --- Event Listeners and Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const dateSelector = document.getElementById('date-selector');
+            const saveButton = document.getElementById('save-button');
+            const downloadAllButton = document.getElementById('download-all-button');
+
+            // Set default date to today and trigger initial display
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const formattedToday = `${year}-${month}-${day}`;
+            dateSelector.value = formattedToday;
+            updateAstrologyInfo(formattedToday);
+
+            // Add event listener for date changes
+            dateSelector.addEventListener('change', (event) => {
+                updateAstrologyInfo(event.target.value);
+            });
+
+            // Add event listener for save button
+            saveButton.addEventListener('click', saveEntry);
+
+            // Add event listener for download all button
+            downloadAllButton.addEventListener('click', downloadAllEntries);
+
+            // Handle window resize to redraw canvas
+            window.addEventListener('resize', () => {
+                const selectedDate = dateSelector.value;
+                updateAstrologyInfo(selectedDate);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vedic Planetary Malefic Aspect Timeline with Directions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            padding: 15px; /* Adjusted padding */
+        }
+        .container {
+            max-width: 1300px; /* Adjusted for potentially wider Y-axis labels */
+            margin: 0 auto;
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0 0 0 / 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #0056b3;
+            margin-bottom: 10px;
+        }
+        .controls {
+            display: flex; /* Use flexbox for better alignment */
+            justify-content: center; /* Center items */
+            align-items: center; /* Align items vertically */
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+            margin-bottom: 20px;
+        }
+        .controls .control-group {
+            margin: 5px 15px; /* Add some spacing between control groups */
+        }
+        .controls label {
+            margin-right: 8px;
+            font-size: 14px;
+        }
+        .controls select {
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+            background-color: #fff;
+        }
+        svg {
+            display: block;
+            margin: 20px auto;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #e9ecef;
+            overflow: visible;
+        }
+        .sign-band {
+            stroke: #ddd;
+            stroke-width: 0.5;
+        }
+        .aspect-rect {
+            stroke-width: 0;
+        }
+        .axis text {
+            font-size: 10px; /* Keep Y-axis text size, may need adjustment if too long */
+            fill: #555;
+        }
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: #888;
+            shape-rendering: crispEdges;
+        }
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 10;
+            white-space: nowrap;
+        }
+        .legend {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .legend-item {
+            display: inline-block;
+            margin-right: 15px;
+        }
+        .legend-color {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            margin-right: 5px;
+            border-radius: 2px;
+            border: 1px solid #666; /* Add border to legend color swatch for dark highlight */
+        }
+        .interactive-line {
+            stroke: #000;
+            stroke-width: 1;
+            pointer-events: none;
+            display: none;
+        }
+        .date-display {
+            font-size: 12px;
+            fill: #000;
+            text-anchor: middle;
+            pointer-events: none;
+            display: none;
+        }
+        /* Updated highlight color for the most afflicted sign */
+        .highlight-most-afflicted {
+            fill: rgba(60, 60, 60, 0.15); /* Very subtle dark fill */
+            stroke: #2c3e50;          /* Dark blue-grey border */
+            stroke-width: 2.5;         /* Slightly thicker border */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Vedic Planetary Malefic Aspect Timeline</h1>
+        <div class="controls">
+            <div class="control-group">
+                <label for="yearSelector">Select Year:</label>
+                <select id="yearSelector">
+                    <option value="2023">2023</option>
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
+                    <option value="2026">2026</option>
+                    <option value="2027">2027</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="ascendantSelector">Select Ascendant:</label>
+                <select id="ascendantSelector">
+                    </select>
+            </div>
+        </div>
+        <div class="legend">
+            <div class="legend-item"><span class="legend-color" style="background-color: #e41a1c;"></span> Malefic Aspects (Mars, Saturn, Rahu, Ketu)</div>
+             <div class="legend-item"><span class="legend-color" style="background-color: rgba(60, 60, 60, 0.15); border-color: #2c3e50;"></span> Most Afflicted Sign Highlight</div>
+        </div>
+        <svg id="aspectTimeline"></svg>
+    </div>
+
+    <script>
+        // --- DATA DEFINITIONS ---
+        const transitData = { // Same as previous artifact
+            Mars: [
+                { date: '2023-01-01', sign: 'Sagittarius' }, { date: '2024-02-05', sign: 'Capricorn' }, { date: '2024-03-15', sign: 'Aquarius' }, { date: '2024-04-23', sign: 'Pisces' }, { date: '2024-06-01', sign: 'Aries' }, { date: '2024-07-12', sign: 'Taurus' }, { date: '2024-08-26', sign: 'Gemini' }, { date: '2024-10-20', sign: 'Cancer' }, { date: '2025-01-21', sign: 'Gemini' }, { date: '2025-04-03', sign: 'Cancer' }, { date: '2025-06-07', sign: 'Leo' }, { date: '2025-07-28', sign: 'Virgo' }, { date: '2025-09-13', sign: 'Libra' }, { date: '2025-10-27', sign: 'Scorpio' }, { date: '2025-12-07', sign: 'Sagittarius' }, { date: '2026-01-16', sign: 'Capricorn' }, { date: '2026-02-23', sign: 'Aquarius' }, { date: '2026-04-02', sign: 'Pisces' }, { date: '2026-05-11', sign: 'Aries' }, { date: '2026-06-21', sign: 'Taurus' }, { date: '2026-08-02', sign: 'Gemini' }, { date: '2026-09-18', sign: 'Cancer' }, { date: '2026-11-12', sign: 'Leo' }, { date: '2027-03-10', sign: 'Cancer' }, { date: '2027-04-26', sign: 'Leo' }, { date: '2027-07-05', sign: 'Virgo' }, { date: '2027-08-24', sign: 'Libra' }, { date: '2027-10-08', sign: 'Scorpio' }, { date: '2027-11-18', sign: 'Sagittarius' }, { date: '2027-12-27', sign: 'Capricorn' }
+            ],
+            Mercury: [ /* Not used for malefic, kept for potential future use */
+                { date: 'Jan 18, 2023', sign: 'Capricorn' }, { date: 'Feb 7, 2023', sign: 'Aquarius' }, { date: 'Feb 27, 2023', sign: 'Pisces' }, { date: 'Mar 16, 2023', sign: 'Aries' }, { date: 'Apr 21, 2023', sign: 'Taurus' }, { date: 'May 27, 2023', sign: 'Gemini' }, { date: 'June 24, 2023', sign: 'Cancer' }, { date: 'July 19, 2023', sign: 'Leo' }, { date: 'Sep 10, 2023', sign: 'Virgo' }, { date: 'Oct 25, 2023', sign: 'Libra' }, { date: 'Nov 19, 2023', sign: 'Scorpio' }, { date: 'Dec 28, 2023', sign: 'Sagittarius' }, { date: 'Jan 18, 2024', sign: 'Capricorn' }, { date: 'Feb 9, 2024', sign: 'Aquarius' }, { date: 'Mar 6, 2024', sign: 'Pisces' }, { date: 'Mar 26, 2024', sign: 'Aries' }, { date: 'May 10, 2024', sign: 'Taurus' }, { date: 'May 31, 2024', sign: 'Gemini' }, { date: 'June 14, 2024', sign: 'Cancer' }, { date: 'July 10, 2024', sign: 'Leo' }, { date: 'Aug 27, 2024', sign: 'Virgo' }, { date: 'Oct 29, 2024', sign: 'Libra' }, { date: 'Nov 20, 2024', sign: 'Scorpio' }, { date: 'Dec 15, 2024', sign: 'Sagittarius' }, { date: 'Jan 5, 2025', sign: 'Capricorn' }, { date: 'Feb 1, 2025', sign: 'Aquarius' }, { date: 'Feb 20, 2025', sign: 'Pisces' }, { date: 'Mar 11, 2025', sign: 'Aries' }, { date: 'Mar 31, 2025', sign: 'Taurus' }, { date: 'May 15, 2025', sign: 'Gemini' }, { date: 'May 30, 2025', sign: 'Cancer' }, { date: 'June 20, 2025', sign: 'Leo' }, { date: 'Aug 22, 2025', sign: 'Virgo' }, { date: 'Sep 22, 2025', sign: 'Libra' }, { date: 'Oct 13, 2025', sign: 'Scorpio' }, { date: 'Nov 29, 2025', sign: 'Sagittarius' }, { date: 'Dec 19, 2025', sign: 'Capricorn' }, { date: 'Jan 11, 2026', sign: 'Aquarius' }, { date: 'Feb 8, 2026', sign: 'Pisces' }, { date: 'Mar 3, 2026', sign: 'Aries' }, { date: 'Apr 15, 2026', sign: 'Taurus' }, { date: 'June 3, 2026', sign: 'Gemini' }, { date: 'June 21, 2026', sign: 'Cancer' }, { date: 'July 13, 2026', sign: 'Leo' }, { date: 'Sep 15, 2026', sign: 'Virgo' }, { date: 'Oct 28, 2026', sign: 'Libra' }, { date: 'Nov 22, 2026', sign: 'Scorpio' }, { date: 'Dec 17, 2026', sign: 'Sagittarius' }, { date: 'Jan 7, 2027', sign: 'Capricorn' }, { date: 'Feb 3, 2027', sign: 'Aquarius' }, { date: 'Feb 23, 2027', sign: 'Pisces' }, { date: 'Mar 15, 2027', sign: 'Aries' }, { date: 'Apr 4, 2027', sign: 'Taurus' }, { date: 'May 19, 2027', sign: 'Gemini' }, { date: 'June 5, 2027', sign: 'Cancer' }, { date: 'June 27, 2027', sign: 'Leo' }, { date: 'Aug 29, 2027', sign: 'Virgo' }, { date: 'Sep 29, 2027', sign: 'Libra' }, { date: 'Oct 20, 2027', sign: 'Scorpio' }, { date: 'Nov 10, 2027', sign: 'Sagittarius' }, { date: 'Dec 26, 2027', sign: 'Capricorn' }
+            ],
+            Saturn: [
+                { date: '2023-01-17', sign: 'Aquarius' }, { date: '2025-03-29', sign: 'Pisces' }, { date: '2027-06-03', sign: 'Aries' }
+            ],
+            Rahu: [
+                { date: '2023-11-29', sign: 'Pisces' }, { date: '2025-05-30', sign: 'Aquarius' }, { date: '2026-11-25', sign: 'Capricorn' }
+            ],
+            Ketu: [
+                { date: '2023-11-29', sign: 'Virgo' }, { date: '2025-05-30', sign: 'Leo' }, { date: '2026-11-25', sign: 'Cancer' }
+            ]
+        };
+        const aspectRules = {
+            Mars: [0, 3, 6, 7], Saturn: [0, 2, 6, 9], Rahu: [0, 4, 8], Ketu: [0, 4, 8]
+        };
+        const maleficPlanets = ['Mars', 'Saturn', 'Rahu', 'Ketu'];
+        const signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
+        const signToIndex = new Map(signs.map((sign, i) => [sign, i]));
+
+        const directionData = {
+            
+    Aries: { Aries: 'East', Taurus: 'ENE', Gemini: 'NNE', Cancer: 'North', Leo: 'NNW', Virgo: 'WNW', Libra: 'West', Scorpio: 'WSW', Sagittarius: 'SSW', Capricorn: 'South', Aquarius: 'SSE', Pisces: 'ESE' },
+    Taurus: { Aries: 'ESE', Taurus: 'East', Gemini: 'ENE', Cancer: 'NNE', Leo: 'North', Virgo: 'NNW', Libra: 'WNW', Scorpio: 'West', Sagittarius: 'WSW', Capricorn: 'SSW', Aquarius: 'South', Pisces: 'SSE' },
+    Gemini: { Aries: 'SSE', Taurus: 'ESE', Gemini: 'East', Cancer: 'ENE', Leo: 'NNE', Virgo: 'North', Libra: 'NNW', Scorpio: 'WNW', Sagittarius: 'West', Capricorn: 'WSW', Aquarius: 'SSW', Pisces: 'South' },
+    Cancer: { Aries: 'South', Taurus: 'SSE', Gemini: 'ESE', Cancer: 'East', Leo: 'ENE', Virgo: 'NNE', Libra: 'North', Scorpio: 'NNW', Sagittarius: 'WNW', Capricorn: 'West', Aquarius: 'WSW', Pisces: 'SSW' },
+    Leo: { Aries: 'SSW', Taurus: 'South', Gemini: 'SSE', Cancer: 'ESE', Leo: 'East', Virgo: 'ENE', Libra: 'NNE', Scorpio: 'North', Sagittarius: 'NNW', Capricorn: 'WNW', Aquarius: 'West', Pisces: 'WSW' },
+    Virgo: { Aries: 'WSW', Taurus: 'SSW', Gemini: 'South', Cancer: 'SSE', Leo: 'ESE', Virgo: 'East', Libra: 'ENE', Scorpio: 'NNE', Sagittarius: 'North', Capricorn: 'NNW', Aquarius: 'WNW', Pisces: 'West' },
+    Libra: { Aries: 'West', Taurus: 'WSW', Gemini: 'SSW', Cancer: 'South', Leo: 'SSE', Virgo: 'ESE', Libra: 'East', Scorpio: 'ENE', Sagittarius: 'NNE', Capricorn: 'North', Aquarius: 'NNW', Pisces: 'WNW' },
+    Scorpio: { Aries: 'WNW', Taurus: 'West', Gemini: 'WSW', Cancer: 'SSW', Leo: 'South', Virgo: 'SSE', Libra: 'ESE', Scorpio: 'East', Sagittarius: 'ENE', Capricorn: 'NNE', Aquarius: 'North', Pisces: 'NNW' },
+    Sagittarius: { Aries: 'NNW', Taurus: 'WNW', Gemini: 'West', Cancer: 'WSW', Leo: 'SSW', Virgo: 'South', Libra: 'SSE', Scorpio: 'ESE', Sagittarius: 'East', Capricorn: 'ENE', Aquarius: 'NNE', Pisces: 'North' },
+    Capricorn: { Aries: 'North', Taurus: 'NNW', Gemini: 'WNW', Cancer: 'West', Leo: 'WSW', Virgo: 'SSW', Libra: 'South', Scorpio: 'SSE', Sagittarius: 'ESE', Capricorn: 'East', Aquarius: 'ENE', Pisces: 'NNE' },
+    Aquarius: { Aries: 'NNE', Taurus: 'North', Gemini: 'NNW', Cancer: 'WNW', Leo: 'West', Virgo: 'WSW', Libra: 'SSW', Scorpio: 'South', Sagittarius: 'SSE', Capricorn: 'ESE', Aquarius: 'East', Pisces: 'ENE' },
+    Pisces: { Aries: 'ENE', Taurus: 'NNE', Gemini: 'North', Cancer: 'NNW', Leo: 'WNW', Virgo: 'West', Libra: 'WSW', Scorpio: 'SSW', Sagittarius: 'South', Capricorn: 'SSE', Aquarius: 'ESE', Pisces: 'East' }
+};
+
+        // --- DATA PROCESSING ---
+        const processedTransits = [];
+        Object.keys(transitData).forEach(planet => {
+            const transits = transitData[planet];
+            if (!transits) return;
+            for (let i = 0; i < transits.length; i++) {
+                const entryDate = new Date(transits[i].date);
+                const overallEndDate = new Date('2027-12-31T23:59:59');
+                const exitDate = (i < transits.length - 1) ? new Date(transits[i+1].date) : overallEndDate;
+                processedTransits.push({
+                    planet: planet, sign: transits[i].sign.replace(' (Rx)', ''),
+                    isRetrograde: transits[i].sign.includes('(Rx)'),
+                    entryDate: entryDate, exitDate: exitDate
+                });
+            }
+        });
+
+        const fullSampleDates = [];
+        let iterDate = new Date('2023-01-01');
+        const overallEndDate = new Date('2027-12-31');
+        while (iterDate <= overallEndDate) {
+            fullSampleDates.push(new Date(iterDate));
+            iterDate.setDate(iterDate.getDate() + 7);
+        }
+        if (fullSampleDates[fullSampleDates.length - 1].getTime() < overallEndDate.getTime()) {
+            fullSampleDates.push(new Date(overallEndDate));
+        }
+
+        // --- D3 SETUP ---
+        const svgWidth = 1100; 
+        const svgHeight = 800;
+        const margin = { top: 40, right: 50, bottom: 60, left: 120 }; 
+        const innerWidth = svgWidth - margin.left - margin.right;
+        const innerHeight = svgHeight - margin.top - margin.bottom;
+
+        const svg = d3.select("#aspectTimeline").attr("width", svgWidth).attr("height", svgHeight);
+        const g = svg.append("g").attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+        const xScale = d3.scaleTime().range([0, innerWidth]);
+        const yScale = d3.scaleBand().domain(signs).range([0, innerHeight]).padding(0.1);
+        const colorScaleMalefic = d3.scaleSequential(d3.interpolateReds);
+        const dateFormat = d3.timeFormat("%d-%m-%Y");
+
+        const yAxisGroup = g.append("g").attr("class", "axis y-axis"); 
+
+        const signBands = g.selectAll(".sign-band").data(signs).enter().append("rect")
+            .attr("class", "sign-band").attr("x", 0).attr("y", d => yScale(d))
+            .attr("width", innerWidth).attr("height", yScale.bandwidth())
+            .attr("fill", (d, i) => i % 2 === 0 ? '#f8f8f8' : '#ffffff');
+
+        const tooltip = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
+        const interactiveLine = g.append("line").attr("class", "interactive-line").attr("y1", 0).attr("y2", innerHeight);
+        const dateDisplay = svg.append("text").attr("class", "date-display").attr("y", margin.top / 2);
+
+        // --- HELPER FUNCTIONS ---
+        function getPlanetSign(planet, date) { 
+            const planetTransits = processedTransits.filter(t => t.planet === planet);
+            planetTransits.sort((a, b) => a.entryDate - b.entryDate);
+            for (const transit of planetTransits) {
+                if (date >= transit.entryDate && date < transit.exitDate) return transit.sign;
+            }
+            if (planetTransits.length > 0) {
+                 const lastTransit = planetTransits[planetTransits.length - 1];
+                 if (date.getTime() === lastTransit.exitDate.getTime() && date.getTime() === overallEndDate.getTime()) {
+                     return lastTransit.sign;
+                 }
+            }
+            return null;
+        }
+
+        function calculateAspectDetails(date, targetSignName) { 
+            const detailedAspects = { malefic: [] };
+            const targetSignIndex = signToIndex.get(targetSignName);
+            for (const planet of maleficPlanets) {
+                const currentSignName = getPlanetSign(planet, date);
+                if (!currentSignName) continue;
+                const currentSignIndex = signToIndex.get(currentSignName);
+                const aspects = aspectRules[planet];
+                if (!aspects) continue;
+                aspects.forEach(aspectOffset => {
+                    const aspectedSignIndex = (currentSignIndex + aspectOffset) % 12;
+                    if (aspectedSignIndex === targetSignIndex) {
+                        let aspectType = '';
+                        switch (aspectOffset) {
+                            case 0: aspectType = 'In Sign'; break; case 2: aspectType = '3rd'; break;
+                            case 3: aspectType = '4th'; break; case 4: aspectType = '5th'; break;
+                            case 6: aspectType = '7th'; break; case 7: aspectType = '8th'; break;
+                            case 8: aspectType = '9th'; break; case 9: aspectType = '10th'; break;
+                            default: aspectType = `${aspectOffset + 1}th`;
+                        }
+                        detailedAspects.malefic.push({ planet: planet, aspect: aspectType });
+                    }
+                });
+            }
+            return detailedAspects;
+        }
+
+        function calculateMaleficAspectCountsForDate(date) { 
+            const aspectCounts = new Map(signs.map(sign => [sign, { malefic: 0 }]));
+            for (const planet of maleficPlanets) {
+                const currentSignName = getPlanetSign(planet, date);
+                if (!currentSignName) continue;
+                const currentSignIndex = signToIndex.get(currentSignName);
+                const aspects = aspectRules[planet];
+                if (!aspects) continue;
+                aspects.forEach(aspectOffset => {
+                    const aspectedSignIndex = (currentSignIndex + aspectOffset) % 12;
+                    const aspectedSignName = signs[aspectedSignIndex];
+                    aspectCounts.get(aspectedSignName).malefic++;
+                });
+            }
+            return aspectCounts;
+        }
+
+        // --- CHART DRAWING FUNCTION ---
+        function drawChart(selectedYear, selectedAscendant) {
+            const yearStartDate = new Date(selectedYear, 0, 1);
+            const yearEndDate = new Date(selectedYear, 11, 31, 23, 59, 59);
+            xScale.domain([yearStartDate, yearEndDate]);
+
+            yAxisGroup.call(d3.axisLeft(yScale).tickFormat(sign => {
+                const direction = directionData[selectedAscendant] ? directionData[selectedAscendant][sign] : '';
+                return `${sign} (${direction})`;
+            }));
+            
+            let yearSampleDates = fullSampleDates.filter(d => d.getFullYear() === selectedYear);
+            if (yearSampleDates.length === 0 || yearSampleDates[0].getTime() > yearStartDate.getTime()) {
+                yearSampleDates.unshift(new Date(yearStartDate));
+            }
+            if (yearSampleDates.length === 0 || yearSampleDates[yearSampleDates.length - 1].getTime() < yearEndDate.getTime()) {
+                if (!yearSampleDates.some(d => d.getTime() === yearEndDate.getTime())) {
+                     yearSampleDates.push(new Date(yearEndDate));
+                }
+            }
+            yearSampleDates.sort((a, b) => a - b);
+            yearSampleDates = yearSampleDates.filter((date, index, self) => index === self.findIndex((d) => d.getTime() === date.getTime()));
+
+            const yearMaleficAspectCountsByDate = new Map();
+            yearSampleDates.forEach(date => {
+                yearMaleficAspectCountsByDate.set(date.getTime(), calculateMaleficAspectCountsForDate(date));
+            });
+
+            const yearChartData = [];
+            yearSampleDates.forEach(date => {
+                const aspectCounts = yearMaleficAspectCountsByDate.get(date.getTime());
+                signs.forEach(sign => {
+                    yearChartData.push({
+                        date: date, sign: sign, type: 'malefic',
+                        count: aspectCounts.get(sign).malefic
+                    });
+                });
+            });
+
+            const maxMaleficAspectCountForYear = d3.max(yearChartData, d => d.count);
+            colorScaleMalefic.domain([0, maxMaleficAspectCountForYear > 0 ? maxMaleficAspectCountForYear : 1]);
+
+            g.select(".x-axis").remove(); 
+            g.selectAll(".aspect-rect").remove(); 
+
+            g.append("g").attr("class", "axis x-axis") 
+                .attr("transform", `translate(0, ${innerHeight})`)
+                .call(d3.axisBottom(xScale).ticks(d3.timeMonth.every(1)).tickFormat(d3.timeFormat("%b"))); 
+
+            const rects = g.selectAll(".aspect-rect")
+                .data(yearChartData)
+                .enter().append("rect")
+                .attr("class", "aspect-rect")
+                .attr("x", d => xScale(d.date))
+                .attr("y", d => yScale(d.sign))
+                .attr("width", (d, i) => {
+                    const currentSampleIndex = yearSampleDates.findIndex(sd => sd.getTime() === d.date.getTime());
+                    let widthVal = (currentSampleIndex < yearSampleDates.length - 1) ? (xScale(yearSampleDates[currentSampleIndex + 1]) - xScale(d.date)) : (xScale(yearEndDate) - xScale(d.date));
+                    return Math.max(1, widthVal);
+                })
+                .attr("height", yScale.bandwidth())
+                .attr("fill", d => d.count > 0 ? colorScaleMalefic(d.count) : 'transparent');
+
+            rects.on("mouseover", function(event, d) {
+                const detailedAspects = calculateAspectDetails(d.date, d.sign);
+                let tooltipContent = `Date: ${dateFormat(d.date)}<br>Sign: ${d.sign}<br>Direction: ${directionData[selectedAscendant]?.[d.sign] || ''}<br>Malefic Count: ${d.count}`;
+                if (detailedAspects.malefic.length > 0) {
+                    tooltipContent += `<br>Malefic Aspects:`;
+                    detailedAspects.malefic.forEach(item => {
+                        tooltipContent += `<br>- ${item.planet} (${item.aspect})`;
+                    });
+                }
+                tooltip.transition().duration(200).style("opacity", .9);
+                tooltip.html(tooltipContent)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 28) + "px");
+            })
+            .on("mouseleave", function() {
+                tooltip.transition().duration(500).style("opacity", 0);
+            });
+        }
+
+        // --- INTERACTIVITY & INITIALIZATION ---
+        function updateChartBasedOnSelections() {
+            const selectedYear = parseInt(d3.select("#yearSelector").property("value"));
+            const selectedAscendant = d3.select("#ascendantSelector").property("value");
+            drawChart(selectedYear, selectedAscendant);
+        }
+
+        const ascendantSelector = d3.select("#ascendantSelector");
+        signs.forEach(sign => {
+            ascendantSelector.append("option").attr("value", sign).text(sign);
+        });
+        ascendantSelector.property("value", "Aries"); 
+
+        d3.select("#yearSelector").on("change", updateChartBasedOnSelections);
+        ascendantSelector.on("change", updateChartBasedOnSelections);
+
+        svg.on("mousemove", function(event) {
+            const [mouseX, mouseY] = d3.pointer(event, g.node()); // Get pointer relative to the 'g' element
+            const xPos = mouseX; // mouseX is already relative to 'g'
+            
+            if (xPos < 0 || xPos > innerWidth || mouseY < 0 || mouseY > innerHeight) { 
+                interactiveLine.style("display", "none");
+                dateDisplay.style("display", "none");
+                signBands.classed("highlight-most-afflicted", false); 
+                return;
+            }
+
+            const hoveredDate = xScale.invert(xPos);
+
+            const currentMaleficAspectCounts = calculateMaleficAspectCountsForDate(hoveredDate);
+            let maxMalefic = 0;
+            signs.forEach(sign => {
+                maxMalefic = Math.max(maxMalefic, currentMaleficAspectCounts.get(sign).malefic);
+            });
+
+            interactiveLine.attr("x1", xPos).attr("x2", xPos).style("display", "block");
+            // For dateDisplay, mouseX relative to SVG is needed. d3.pointer(event, svg.node())[0]
+            const svgMouseX = d3.pointer(event, svg.node())[0];
+            dateDisplay.attr("x", svgMouseX).text(dateFormat(hoveredDate)).style("display", "block");
+
+            signBands.classed("highlight-most-afflicted", false); 
+            if (maxMalefic > 0) {
+                signs.forEach(sign => {
+                    if (currentMaleficAspectCounts.get(sign).malefic === maxMalefic) {
+                        d3.select(signBands.nodes()[signToIndex.get(sign)]).classed("highlight-most-afflicted", true);
+                    }
+                });
+            }
+             if (!d3.select(event.target).classed('aspect-rect') && !d3.select(event.target.parentNode).classed('aspect-rect')) {
+                 tooltip.style("opacity", 0);
+             }
+        }).on("mouseleave", function() {
+            interactiveLine.style("display", "none");
+            dateDisplay.style("display", "none");
+            signBands.classed("highlight-most-afflicted", false);
+            tooltip.style("opacity", 0);
+        });
+
+        updateChartBasedOnSelections();
+
+    </script>
+</body>
+</html>
