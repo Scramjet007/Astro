@@ -10,53 +10,42 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-            color: #374151;
+            background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+            color: #e5e7eb;
+            overflow-x: hidden;
         }
         .chart-container {
             position: relative;
             width: 100%;
-            max-width: 600px; /* Increased max width for better resolution */
-            aspect-ratio: 1 / 1; /* Keep it square */
+            max-width: 600px;
+            aspect-ratio: 1 / 1;
             margin: 0 auto;
-            border-radius: 1rem; /* Rounded corners for the container */
-            overflow: hidden; /* Hide overflow from rounded corners */
         }
         canvas {
             display: block;
             width: 100%;
             height: 100%;
-            background-color: #ffffff;
-            border-radius: 1rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: #090a0f;
+            border-radius: 50%;
+            box-shadow: 0 0 25px rgba(0, 191, 255, 0.3);
         }
         .tab-button {
             padding: 0.75rem 1.5rem;
             border-radius: 0.5rem;
             font-weight: 600;
-            color: #4b5563;
-            background-color: #e5e7eb;
+            color: #9ca3af;
+            background-color: rgba(31, 41, 55, 0.5);
+            border: 1px solid #4b5563;
             transition: all 0.2s ease-in-out;
         }
         .tab-button.active {
             background-color: #3b82f6;
             color: #ffffff;
+            border-color: #3b82f6;
             box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
         }
         .tab-button:hover:not(.active) {
-            background-color: #d1d5db;
-        }
-        .confidence-high {
-            background-color: #d1fae5; /* Green */
-            color: #065f46;
-        }
-        .confidence-medium {
-            background-color: #fef3c7; /* Yellow */
-            color: #92400e;
-        }
-        .confidence-low {
-            background-color: #fee2e2; /* Red */
-            color: #991b1b;
+            background-color: rgba(55, 65, 81, 0.7);
         }
         /* Modal Styles */
         .modal {
@@ -65,7 +54,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
+            background-color: rgba(0, 0, 0, 0.8);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -79,69 +68,27 @@
             visibility: visible;
         }
         .modal-content {
-            background-color: #ffffff;
+            background-color: #1f2937;
+            color: #e5e7eb;
             padding: 2rem;
             border-radius: 0.75rem;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            border: 1px solid #4b5563;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
             max-width: 500px;
             width: 90%;
             text-align: center;
         }
-        .modal-content h3 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            color: #3b82f6;
-        }
-        .modal-content p {
-            margin-bottom: 1.5rem;
-            color: #4b5563;
-        }
-        .modal-content label {
-            display: block;
-            margin-bottom: 0.75rem;
-            font-size: 1rem;
-            cursor: pointer;
-            text-align: left;
-            padding: 0.5rem;
-            border-radius: 0.5rem;
-            transition: background-color 0.2s ease-in-out;
-        }
-        .modal-content label:hover {
-            background-color: #e5e7eb;
-        }
-        .modal-content input[type="number"] {
-            margin-right: 0.75rem;
-        }
-        .modal-content button {
-            background-color: #3b82f6;
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
-            font-weight: 600;
-            margin-top: 1rem;
-            cursor: pointer;
-            transition: background-color 0.2s ease-in-out;
-        }
-        .modal-content button:hover {
-            background-color: #2563eb;
-        }
-        .pti-highlight {
-            font-weight: bold;
-            color: #ef4444; /* Red color for PTI planets on chart */
-        }
     </style>
 </head>
 <body class="p-6">
-    <div class="max-w-6xl mx-auto bg-white p-8 rounded-xl shadow-lg">
-        <h1 class="text-4xl font-extrabold text-center text-blue-700 mb-8">Transit Event Prediction App</h1>
+    <div class="max-w-6xl mx-auto bg-gray-900 bg-opacity-75 backdrop-blur-sm p-8 rounded-xl shadow-2xl border border-gray-700">
+        <h1 class="text-4xl font-extrabold text-center text-blue-400 mb-8 tracking-wider">Transit Event Prediction</h1>
 
         <!-- Input Section -->
-        <div class="mb-8 p-6 bg-blue-50 rounded-lg shadow-inner">
-            <h2 class="text-2xl font-bold text-blue-800 mb-4">1. Input Planetary Longitude Data</h2>
+        <div class="mb-8 p-6 bg-gray-800 bg-opacity-50 rounded-lg shadow-inner border border-gray-700">
+            <h2 class="text-2xl font-bold text-blue-300 mb-4">1. Input Planetary Longitude Data</h2>
             <textarea id="chartDataInput"
-                      class="w-full h-64 p-4 text-lg border-2 border-blue-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out font-mono"
-                      placeholder="Paste your chart data here, e.g.:&#10;Body     D‑1      D‑9      D‑10&#10;Sun      24Ge05   0Aq47    18Vi09&#10;Moon     23Pi56   29Ge15   12Aq09&#10;Mars     26Ge32   25Aq22   23Vi04&#10;Mercury  20Cn14   22Vi20   19Li32&#10;Jupiter  21Cp27   4Ar31    17Li06&#10;Venus    10Ta20   13Ar24   9Cn19&#10;Saturn   28Li02   10Cn19   26Ta04&#10;Rahu     17Ar51   28Vi23   24Sc14&#10;Ketu     17Li51   28Pi23   24Ta14&#10;Lagna    29Ge32   25Pi17   29Vi03"></textarea>
+                      class="w-full h-64 p-4 text-lg bg-gray-900 border-2 border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out font-mono text-gray-200"></textarea>
             <button id="generateChartsBtn"
                     class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition transform hover:-translate-y-1 duration-300 ease-in-out text-xl">
                 Generate Charts
@@ -151,8 +98,8 @@
         <!-- Output Section -->
         <div id="outputSection" class="hidden">
             <!-- Chart Display (for D1, D9, D10) -->
-            <div class="mb-8 p-6 bg-green-50 rounded-lg shadow-inner">
-                <h2 class="text-2xl font-bold text-green-800 mb-4">2. Polar Charts (Natal)</h2>
+            <div class="mb-8 p-6 bg-gray-800 bg-opacity-50 rounded-lg shadow-inner border border-gray-700">
+                <h2 class="text-2xl font-bold text-green-300 mb-4">2. Natal Charts</h2>
                 <div class="flex justify-center space-x-4 mb-6">
                     <button id="tabD1" class="tab-button active">D-1 Chart</button>
                     <button id="tabD9" class="tab-button">D-9 Chart</button>
@@ -161,21 +108,21 @@
                 <div class="chart-container">
                     <canvas id="chartCanvas"></canvas>
                 </div>
-                <div id="planetDetailsDisplay" class="mt-4 p-4 text-sm bg-white rounded-lg shadow-md min-h-[50px] transition-all duration-300 ease-in-out">
-                    <p class="text-gray-500">Hover over a planet on the chart to see its details here.</p>
+                <div id="planetDetailsDisplay" class="mt-4 p-4 text-sm bg-gray-900 rounded-lg shadow-md min-h-[50px] transition-all duration-300 ease-in-out border border-gray-700">
+                    <p class="text-gray-400">Hover over a planet on the chart to see its details here.</p>
                 </div>
             </div>
 
             <!-- PTI Analysis Section -->
-            <div class="mt-8 p-6 bg-yellow-50 rounded-lg shadow-inner">
-                <h2 class="text-2xl font-bold text-yellow-800 mb-4">3. Primary Time Indicator (PTI) Analysis</h2>
+            <div class="mt-8 p-6 bg-gray-800 bg-opacity-50 rounded-lg shadow-inner border border-gray-700">
+                <h2 class="text-2xl font-bold text-yellow-300 mb-4">3. Primary Time Indicator (PTI) Analysis</h2>
                 <button id="findPtiBtn"
                         class="mb-6 w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition transform hover:-translate-y-1 duration-300 ease-in-out text-xl">
                     Find PTI for all Houses
                 </button>
                 <div id="ptiResults" class="overflow-x-auto">
-                    <table class="min-w-full bg-white rounded-lg shadow overflow-hidden">
-                        <thead class="bg-yellow-100 text-yellow-800">
+                    <table class="min-w-full bg-gray-800 rounded-lg shadow overflow-hidden border border-gray-700">
+                        <thead class="bg-gray-700 text-yellow-300">
                             <tr>
                                 <th class="py-3 px-4 text-left text-sm font-semibold uppercase tracking-wider">House</th>
                                 <th class="py-3 px-4 text-left text-sm font-semibold uppercase tracking-wider">PTI Planet</th>
@@ -183,25 +130,25 @@
                                 <th class="py-3 px-4 text-left text-sm font-semibold uppercase tracking-wider">User Note</th>
                             </tr>
                         </thead>
-                        <tbody id="ptiResultsBody" class="divide-y divide-gray-200">
+                        <tbody id="ptiResultsBody" class="divide-y divide-gray-700">
                             <!-- PTI results will be inserted here -->
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- PTI Houses Summary Section (New) -->
-            <div id="ptiSummarySection" class="mt-8 p-6 bg-purple-50 rounded-lg shadow-inner hidden">
-                <h2 class="text-2xl font-bold text-purple-800 mb-4">4. Houses & Their PTI Planets</h2>
+            <!-- PTI Houses Summary Section -->
+            <div id="ptiSummarySection" class="mt-8 p-6 bg-gray-800 bg-opacity-50 rounded-lg shadow-inner hidden border border-gray-700">
+                <h2 class="text-2xl font-bold text-purple-300 mb-4">4. Houses & Their PTI Planets</h2>
                 <div id="ptiHousesSummary" class="overflow-x-auto">
-                    <table class="min-w-full bg-white rounded-lg shadow overflow-hidden">
-                        <thead class="bg-purple-100 text-purple-800">
+                     <table class="min-w-full bg-gray-800 rounded-lg shadow overflow-hidden border border-gray-700">
+                        <thead class="bg-gray-700 text-purple-300">
                             <tr>
                                 <th class="py-3 px-4 text-left text-sm font-semibold uppercase tracking-wider">PTI Planet</th>
                                 <th class="py-3 px-4 text-left text-sm font-semibold uppercase tracking-wider">Houses</th>
                             </tr>
                         </thead>
-                        <tbody id="ptiHousesSummaryBody" class="divide-y divide-gray-200">
+                        <tbody id="ptiHousesSummaryBody" class="divide-y divide-gray-700">
                             <!-- PTI houses summary will be inserted here -->
                         </tbody>
                     </table>
@@ -209,43 +156,37 @@
             </div>
 
             <!-- Transit Data Input Section -->
-            <div class="mt-8 p-6 bg-blue-50 rounded-lg shadow-inner">
-                <h2 class="text-2xl font-bold text-blue-800 mb-4">5. Input Transit Data</h2>
+            <div class="mt-8 p-6 bg-gray-800 bg-opacity-50 rounded-lg shadow-inner border border-gray-700">
+                <h2 class="text-2xl font-bold text-blue-300 mb-4">5. Input Transit Data</h2>
                 <textarea id="transitDataInput"
-                          class="w-full h-64 p-4 text-lg border-2 border-blue-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out font-mono"
-                          placeholder="Paste your transit data here, e.g.:&#10;Body      Longitude       Nakshatra Pada Rasi Navamsa&#10;Lagna     5 Aq 52' 27.06&quot; Dhan      4    Aq   Sc&#10;Sun - BK  12 Cn 33' 41.16&quot; Push      3    Cn   Li&#10;Moon - MK 10 Vi 36' 09.09&quot; Hast      1    Vi   Ar&#10;Mars - DK  0 Vi 39' 07.02&quot; UPha      2    Vi   Cp&#10;Mercury (R) - AmK 16 Cn 33' 19.31&quot; Push      4    Cn   Sc
-Jupiter - AK  17 Ge 00' 41.52&quot; Ardr      4    Ge   Pi
-Venus - PK   4 Ge 02' 07.63&quot; Mrig      4    Ge   Sc
-Saturn (R) - PiK  7 Pi 30' 25.58&quot; UBha      2    Pi   Vi
-Rahu - GK   26 Aq 11' 53.96&quot; PBha      2    Aq   Ta
-Ketu      26 Le 11' 53.96&quot; PPha      4    Le   Sc"></textarea>
+                          class="w-full h-64 p-4 text-lg bg-gray-900 border-2 border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200 ease-in-out font-mono text-gray-200"></textarea>
                 <button id="showDualChartBtn"
                         class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition transform hover:-translate-y-1 duration-300 ease-in-out text-xl">
                     Show Combined Natal & Transit Chart
                 </button>
             </div>
 
-            <!-- Combined Natal & Transit Chart (New Separate Window) -->
-            <div id="dualChartSection" class="mt-8 p-6 bg-purple-50 rounded-lg shadow-inner hidden">
-                <h2 class="text-2xl font-bold text-purple-800 mb-4">6. Combined Natal & Transit Chart</h2>
+            <!-- Combined Natal & Transit Chart -->
+            <div id="dualChartSection" class="mt-8 p-6 bg-gray-800 bg-opacity-50 rounded-lg shadow-inner hidden border border-gray-700">
+                <h2 class="text-2xl font-bold text-purple-300 mb-4">6. Combined Natal & Transit Chart</h2>
                 <div class="chart-container">
                     <canvas id="dualChartCanvas"></canvas>
                 </div>
-                <div id="dualChartPlanetDetailsDisplay" class="mt-4 p-4 text-sm bg-white rounded-lg shadow-md min-h-[50px] transition-all duration-300 ease-in-out">
-                    <p class="text-gray-500">Hover over a planet on the chart to see its details here.</p>
+                <div id="dualChartPlanetDetailsDisplay" class="mt-4 p-4 text-sm bg-gray-900 rounded-lg shadow-md min-h-[50px] transition-all duration-300 ease-in-out border border-gray-700">
+                    <p class="text-gray-400">Hover over a planet on the chart to see its details here.</p>
                 </div>
             </div>
 
             <!-- Event Timing Analysis Section -->
-            <div class="mt-8 p-6 bg-orange-50 rounded-lg shadow-inner">
-                <h2 class="text-2xl font-bold text-orange-800 mb-4">7. Event Timing Analysis (Transit)</h2>
+            <div class="mt-8 p-6 bg-gray-800 bg-opacity-50 rounded-lg shadow-inner border border-gray-700">
+                <h2 class="text-2xl font-bold text-orange-300 mb-4">7. Event Timing Analysis (Transit)</h2>
                 <button id="analyzeEventTimingBtn"
                         class="mb-6 w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition transform hover:-translate-y-1 duration-300 ease-in-out text-xl">
                     Analyze Event Timing for all Houses
                 </button>
                 <div id="eventTimingResults" class="overflow-x-auto">
-                    <table class="min-w-full bg-white rounded-lg shadow overflow-hidden">
-                        <thead class="bg-orange-100 text-orange-800">
+                    <table class="min-w-full bg-gray-800 rounded-lg shadow overflow-hidden border border-gray-700">
+                        <thead class="bg-gray-700 text-orange-300">
                             <tr>
                                 <th class="py-3 px-4 text-left text-sm font-semibold uppercase tracking-wider">House</th>
                                 <th class="py-3 px-4 text-left text-sm font-semibold uppercase tracking-wider">PTI</th>
@@ -254,7 +195,7 @@ Ketu      26 Le 11' 53.96&quot; PPha      4    Le   Sc"></textarea>
                                 <th class="py-3 px-4 text-left text-sm font-semibold uppercase tracking-wider">Details</th>
                             </tr>
                         </thead>
-                        <tbody id="eventTimingResultsBody" class="divide-y divide-gray-200">
+                        <tbody id="eventTimingResultsBody" class="divide-y divide-gray-700">
                             <!-- Event timing results will be inserted here -->
                         </tbody>
                     </table>
@@ -263,87 +204,50 @@ Ketu      26 Le 11' 53.96&quot; PPha      4    Le   Sc"></textarea>
         </div>
     </div>
 
-    <!-- Strength Input Modal (Modified) -->
+    <!-- Strength Input Modal -->
     <div id="strengthInputModal" class="modal">
         <div class="modal-content">
-            <h3 id="modalTitle">Input Planet Strengths</h3>
-            <p id="modalMessage">Please enter the relative strength (e.g., Shadbala value) for the following planets (0-1000, higher is stronger):</p>
-            <div id="modalStrengthInputs" class="grid grid-cols-1 gap-4">
-                <!-- Input fields for planets will be inserted here dynamically -->
-            </div>
-            <button id="modalConfirmBtn">Submit Strengths</button>
+            <h3 id="modalTitle" class="text-blue-400">Input Planet Strengths</h3>
+            <p id="modalMessage">Please enter the relative strength for the following planets (0-1000):</p>
+            <div id="modalStrengthInputs" class="grid grid-cols-1 gap-4"></div>
+            <button id="modalConfirmBtn" class="bg-blue-600 hover:bg-blue-700">Submit Strengths</button>
         </div>
     </div>
 
     <script>
         // --- Constants and Mappings ---
         const SIGNS = ["Ar", "Ta", "Ge", "Cn", "Le", "Vi", "Li", "Sc", "Sg", "Cp", "Aq", "Pi"];
-        const SIGN_FULL_NAMES = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
-        const SIGN_ABBREVIATIONS = {
-            "Ar": "Aries", "Ta": "Taurus", "Ge": "Gemini", "Cn": "Cancer", "Le": "Leo", "Vi": "Virgo",
-            "Li": "Libra", "Sc": "Scorpio", "Sg": "Sagittarius", "Cp": "Capricorn", "Aq": "Aquarius", "Pi": "Pisces"
-        };
+        const SIGN_GLYPHS = { "Ar": "♈", "Ta": "♉", "Ge": "♊", "Cn": "♋", "Le": "♌", "Vi": "♍", "Li": "♎", "Sc": "♏", "Sg": "♐", "Cp": "♑", "Aq": "♒", "Pi": "♓" };
+        const PLANET_GLYPHS = { "Sun": "☉", "Moon": "☽", "Mars": "♂", "Mercury": "☿", "Jupiter": "♃", "Venus": "♀", "Saturn": "♄", "Rahu": "☊", "Ketu": "☋", "Lagna": "ASC" };
+        
         const ZODIAC_SIGNS = {
-            "Ar": { name: "Aries", symbol: "♈", startDegree: 0 },
-            "Ta": { name: "Taurus", symbol: "♉", startDegree: 30 },
-            "Ge": { name: "Gemini", symbol: "♊", startDegree: 60 },
-            "Cn": { name: "Cancer", symbol: "♋", startDegree: 90 },
-            "Le": { name: "Leo", symbol: "♌", startDegree: 120 },
-            "Vi": { name: "Virgo", symbol: "♍", startDegree: 150 },
-            "Li": { name: "Libra", symbol: "♎", startDegree: 180 },
-            "Sc": { name: "Scorpio", symbol: "♏", startDegree: 210 },
-            "Sg": { name: "Sagittarius", symbol: "♐", startDegree: 240 },
-            "Cp": { name: "Capricorn", symbol: "♑", startDegree: 270 },
-            "Aq": { name: "Aquarius", symbol: "♒", startDegree: 300 },
-            "Pi": { name: "Pisces", symbol: "♓", startDegree: 330 }
+            "Ar": { name: "Aries", symbol: "♈", startDegree: 0 }, "Ta": { name: "Taurus", symbol: "♉", startDegree: 30 },
+            "Ge": { name: "Gemini", symbol: "♊", startDegree: 60 }, "Cn": { name: "Cancer", symbol: "♋", startDegree: 90 },
+            "Le": { name: "Leo", symbol: "♌", startDegree: 120 }, "Vi": { name: "Virgo", symbol: "♍", startDegree: 150 },
+            "Li": { name: "Libra", symbol: "♎", startDegree: 180 }, "Sc": { name: "Scorpio", symbol: "♏", startDegree: 210 },
+            "Sg": { name: "Sagittarius", symbol: "♐", startDegree: 240 }, "Cp": { name: "Capricorn", symbol: "♑", startDegree: 270 },
+            "Aq": { name: "Aquarius", symbol: "♒", startDegree: 300 }, "Pi": { name: "Pisces", symbol: "♓", startDegree: 330 }
         };
-        const SIGN_LORDS = {
-            "Ar": "Mars", "Ta": "Venus", "Ge": "Mercury", "Cn": "Moon", "Le": "Sun", "Vi": "Mercury",
-            "Li": "Venus", "Sc": "Mars", "Sg": "Jupiter", "Cp": "Saturn", "Aq": "Saturn", "Pi": "Jupiter"
-        };
-        const PLANET_COLORS = {
-            "Sun": "#FFD700",    // Gold
-            "Moon": "#A9A9A9",   // Dark Gray
-            "Mars": "#FF0000",   // Red
-            "Mercury": "#228B22",// Forest Green
-            "Jupiter": "#FF8C00",// Dark Orange
-            "Venus": "#87CEEB",  // Sky Blue
-            "Saturn": "#4B0082", // Indigo
-            "Rahu": "#6A5ACD",   // Slate Blue
-            "Ketu": "#556B2F",   // Dark Olive Green
-            "Lagna": "#000000"   // Black
-        };
-        const EXALTATION_SIGNS = {
-            "Sun": "Ar", "Moon": "Ta", "Mars": "Cp", "Mercury": "Vi", "Jupiter": "Cn", "Venus": "Pi", "Saturn": "Li"
-        };
-        const DEBILITATION_SIGNS = {
-            "Sun": "Li", "Moon": "Sc", "Mars": "Cn", "Mercury": "Pi", "Jupiter": "Cp", "Venus": "Vi", "Saturn": "Ar"
-        };
-        const OWN_SIGNS = {
-            "Sun": ["Le"], "Moon": ["Cn"], "Mars": ["Ar", "Sc"], "Mercury": ["Ge", "Vi"], "Jupiter": ["Sg", "Pi"],
-            "Venus": ["Ta", "Li"], "Saturn": ["Cp", "Aq"]
-        };
-        const PLANET_ASPECTS_RULES = {
-            "Mars": [4, 7, 8],
-            "Jupiter": [5, 7, 9],
-            "Saturn": [3, 7, 10],
-            "Rahu": [2, 5, 9],
-            "Ketu": []
-        };
+        const SIGN_LORDS = { "Ar": "Mars", "Ta": "Venus", "Ge": "Mercury", "Cn": "Moon", "Le": "Sun", "Vi": "Mercury", "Li": "Venus", "Sc": "Mars", "Sg": "Jupiter", "Cp": "Saturn", "Aq": "Saturn", "Pi": "Jupiter" };
+        const PLANET_COLORS = { "Sun": "#FFD700", "Moon": "#E0E0E0", "Mars": "#FF4500", "Mercury": "#32CD32", "Jupiter": "#FF8C00", "Venus": "#87CEEB", "Saturn": "#9370DB", "Rahu": "#8A2BE2", "Ketu": "#9ACD32", "Lagna": "#FFFFFF" };
+        const EXALTATION_SIGNS = { "Sun": "Ar", "Moon": "Ta", "Mars": "Cp", "Mercury": "Vi", "Jupiter": "Cn", "Venus": "Pi", "Saturn": "Li" };
+        const DEBILITATION_SIGNS = { "Sun": "Li", "Moon": "Sc", "Mars": "Cn", "Mercury": "Pi", "Jupiter": "Cp", "Venus": "Vi", "Saturn": "Ar" };
+        const OWN_SIGNS = { "Sun": ["Le"], "Moon": ["Cn"], "Mars": ["Ar", "Sc"], "Mercury": ["Ge", "Vi"], "Jupiter": ["Sg", "Pi"], "Venus": ["Ta", "Li"], "Saturn": ["Cp", "Aq"] };
+        const PLANET_ASPECTS_RULES = { "Mars": [4, 7, 8], "Jupiter": [5, 7, 9], "Saturn": [3, 7, 10], "Rahu": [2, 5, 9], "Ketu": [] };
         const VALID_NATAL_BODIES = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu", "Lagna"];
         const VALID_TRANSIT_BODIES = ["Lagna", "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"];
         const PTI_ELIGIBLE_PLANETS = ['Jupiter', 'Saturn', 'Rahu', 'Ketu'];
         const COMBUSTION_RANGE_DEGREES = 10;
+
         let parsedChartData = null;
         let parsedTransitData = null;
         let currentChartType = 'D-1';
         let ptiResultsData = [];
         let resolveModalPromise;
-        let userProvidedPlanetStrengths = {
-            "Rahu": 100,
-            "Ketu": 100
-        };
+        let userProvidedPlanetStrengths = { "Rahu": 100, "Ketu": 100 };
         let allChartPlanetsPositions = [];
+        
+        // ... (rest of the variable declarations are the same) ...
         const chartDataInput = document.getElementById('chartDataInput');
         const generateChartsBtn = document.getElementById('generateChartsBtn');
         const outputSection = document.getElementById('outputSection');
@@ -373,57 +277,31 @@ Ketu      26 Le 11' 53.96&quot; PPha      4    Le   Sc"></textarea>
 
         function parsePreciseLongitude(longitudeStr) {
             const parts = longitudeStr.match(/(\d+)\s*([A-Za-z]{2})\s*(\d+)'\s*(\d+\.\d+)"/);
-            if (!parts) {
-                return null;
-            }
-
-            const degreeInSign = parseFloat(parts[1]);
-            const signAbbr = parts[2];
-            const minutes = parseFloat(parts[3]);
-            const seconds = parseFloat(parts[4]);
-
+            if (!parts) return null;
+            const [, degreeInSign, signAbbr, minutes, seconds] = parts;
             const signInfo = ZODIAC_SIGNS[signAbbr];
-            if (!signInfo) {
-                return null;
-            }
-
-            let totalDegrees = signInfo.startDegree + degreeInSign + (minutes / 60) + (seconds / 3600);
-            return totalDegrees;
+            if (!signInfo) return null;
+            return signInfo.startDegree + parseFloat(degreeInSign) + (parseFloat(minutes) / 60) + (parseFloat(seconds) / 3600);
         }
 
         function parseSimpleLongitude(longitudeStr) {
             const match = longitudeStr.match(/(\d+)([A-Za-z]+)(\d+)/);
-            if (!match) {
-                return null;
-            }
-            const degreeInSign = parseInt(match[1]);
-            const signAbbr = match[2];
-            const minutes = parseInt(match[3]);
-
+            if (!match) return null;
+            const [, degreeInSign, signAbbr, minutes] = match;
             const signIndex = SIGNS.indexOf(signAbbr);
-            if (signIndex === -1) {
-                return null;
-            }
-
-            return (signIndex * 30) + degreeInSign + (minutes / 60);
+            if (signIndex === -1) return null;
+            return (signIndex * 30) + parseInt(degreeInSign) + (parseInt(minutes) / 60);
         }
 
         function parseChartData(inputText) {
             const lines = inputText.trim().split('\n');
-            const relevantLines = lines.slice(0, 13);
-            if (relevantLines.length < 2) {
-                return null;
-            }
+            if (lines.length < 2) return null;
             const data = { 'D-1': {}, 'D-9': {}, 'D-10': {} };
-            for (let i = 1; i < relevantLines.length; i++) {
+            for (let i = 1; i < lines.length; i++) {
                 const parts = lines[i].split(/\s+/).filter(Boolean);
-                if (parts.length < 4) {
-                    continue;
-                }
+                if (parts.length < 4) continue;
                 const body = parts[0];
-                if (!VALID_NATAL_BODIES.includes(body)) {
-                    continue;
-                }
+                if (!VALID_NATAL_BODIES.includes(body)) continue;
                 data['D-1'][body] = { raw: parts[1], degree: parseSimpleLongitude(parts[1]) };
                 data['D-9'][body] = { raw: parts[2], degree: parseSimpleLongitude(parts[2]) };
                 data['D-10'][body] = { raw: parts[3], degree: parseSimpleLongitude(parts[3]) };
@@ -442,20 +320,9 @@ Ketu      26 Le 11' 53.96&quot; PPha      4    Le   Sc"></textarea>
                     let rawBody = match[1].trim();
                     const longitudeStr = match[2].trim();
                     let body = rawBody.replace(/\s*\(.*?\)\s*|\s*-\s*[A-Za-z]{2,3}$/g, '').trim();
-                    const parts = body.split(' - ');
-                    if (parts.length > 1 && VALID_TRANSIT_BODIES.includes(parts[0].trim())) {
-                        body = parts[0].trim();
-                    } else {
-                        body = body.trim();
-                    }
-                    if (body === "" && rawBody.toLowerCase().includes("lagna")) {
-                        body = "Lagna";
-                    }
                     if (VALID_TRANSIT_BODIES.includes(body)) {
                         const totalDegrees = parsePreciseLongitude(longitudeStr);
-                        if (totalDegrees !== null) {
-                            data[body] = { raw: longitudeStr, degree: totalDegrees };
-                        }
+                        if (totalDegrees !== null) data[body] = { raw: longitudeStr, degree: totalDegrees };
                     }
                 }
             }
@@ -471,14 +338,10 @@ Ketu      26 Le 11' 53.96&quot; PPha      4    Le   Sc"></textarea>
         function getHouseOfPlanet(lagnaDegree, planetDegree) {
             const lagnaSignIndex = Math.floor(lagnaDegree / 30);
             const planetSignIndex = Math.floor(planetDegree / 30);
-            let houseNumber = (planetSignIndex - lagnaSignIndex + 12) % 12 + 1;
-            return houseNumber;
+            return (planetSignIndex - lagnaSignIndex + 12) % 12 + 1;
         }
 
-        function getLordOfSign(signAbbr) {
-            return SIGN_LORDS[signAbbr];
-        }
-
+        function getLordOfSign(signAbbr) { return SIGN_LORDS[signAbbr]; }
         function getPlanetStrength(planet, sign) {
             if (EXALTATION_SIGNS[planet] === sign) return 2;
             if (DEBILITATION_SIGNS[planet] === sign) return -1;
@@ -489,13 +352,7 @@ Ketu      26 Le 11' 53.96&quot; PPha      4    Le   Sc"></textarea>
         function doesPlanetAspectHouse(planetName, planetHouse, targetHouse) {
             const aspects = PLANET_ASPECTS_RULES[planetName];
             if (!aspects) return false;
-            for (const aspectDistance of aspects) {
-                const aspectedHouse = (planetHouse - 1 + aspectDistance - 1 + 12) % 12 + 1;
-                if (aspectedHouse === targetHouse) {
-                    return true;
-                }
-            }
-            return false;
+            return aspects.some(aspect => (planetHouse - 1 + aspect - 1 + 12) % 12 + 1 === targetHouse);
         }
 
         function doesPlanetAspectPlanet(aspectingPlanetName, aspectingPlanetDegree, targetPlanetDegree) {
@@ -503,13 +360,7 @@ Ketu      26 Le 11' 53.96&quot; PPha      4    Le   Sc"></textarea>
             if (!aspects) return false;
             const aspectingPlanetSignIndex = Math.floor(aspectingPlanetDegree / 30);
             const targetPlanetSignIndex = Math.floor(targetPlanetDegree / 30);
-            for (const aspectDistance of aspects) {
-                const aspectedSignIndex = (aspectingPlanetSignIndex + aspectDistance - 1 + 12) % 12;
-                if (aspectedSignIndex === targetPlanetSignIndex) {
-                    return true;
-                }
-            }
-            return false;
+            return aspects.some(aspect => (aspectingPlanetSignIndex + aspect - 1 + 12) % 12 === targetPlanetSignIndex);
         }
 
         function setupDetailsDisplay(canvasElement, displayElement) {
@@ -522,309 +373,185 @@ Ketu      26 Le 11' 53.96&quot; PPha      4    Le   Sc"></textarea>
                 let hoveredItem = null;
                 for (const item of allChartPlanetsPositions) {
                     const dist = Math.sqrt(Math.pow(mouseX - item.x, 2) + Math.pow(mouseY - item.y, 2));
-                    if (dist < 20) {
+                    if (dist < 15) {
                         hoveredItem = item;
                         break;
                     }
                 }
                 if (hoveredItem) {
+                    const deg = Math.floor(hoveredItem.degreeInSign);
+                    const min = Math.floor((hoveredItem.degreeInSign - deg) * 60);
                     displayElement.innerHTML = `
-                        <p><strong>Planet:</strong> ${hoveredItem.planet}</p>
-                        <p><strong>Position:</strong> ${hoveredItem.degree}° ${hoveredItem.sign}</p>
-                        <p><strong>Chart:</strong> ${hoveredItem.chart}</p>
+                        <p class="flex items-center justify-center text-lg text-gray-200">
+                            <span style="color: ${PLANET_COLORS[hoveredItem.planet]}; font-size: 1.5em; margin-right: 8px;">${PLANET_GLYPHS[hoveredItem.planet]}</span>
+                            <strong>${hoveredItem.planet}</strong>: ${deg}° ${min}' ${SIGN_GLYPHS[hoveredItem.sign]}
+                        </p>
+                        <p class="text-center text-gray-500">Chart: ${hoveredItem.chart}</p>
                     `;
                 } else {
-                    displayElement.innerHTML = `<p class="text-gray-500">Hover over a planet on the chart to see its details here.</p>`;
+                    displayElement.innerHTML = `<p class="text-gray-400">Hover over a planet on the chart to see its details here.</p>`;
                 }
             };
             canvasElement.onmouseleave = () => {
-                displayElement.innerHTML = `<p class="text-gray-500">Hover over a planet on the chart to see its details here.</p>`;
+                displayElement.innerHTML = `<p class="text-gray-400">Hover over a planet on the chart to see its details here.</p>`;
             };
         }
 
-        // --- REVISED drawChartLayer function ---
-        function drawChartLayer(
-            chartData, chartLabel, highlightPtiPlanets,
-            context, centerX, centerY, outerRadius, innerRadius,
-            isLagnaHouseColored, lagnaHighlightColor,
-            drawGridAndLabels, isCombinedChart = false,
-            referenceLagnaDegree = null
-        ) {
-            context.textAlign = 'center';
+        // --- REVISED WESTERN STYLE CHART DRAWING FUNCTION ---
+        function drawWesternChart(chartData, chartLabel, highlightPtiPlanets, context, centerX, centerY, outerRadius, isCombined = false, transitData = null) {
+            context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+            allChartPlanetsPositions = [];
+            const lagnaDegree = chartData.Lagna.degree;
+            if (lagnaDegree === null) return;
+            const lagnaSignIndex = Math.floor(lagnaDegree / 30);
+
             context.textBaseline = 'middle';
-            
-            if (!isCombinedChart || chartLabel.includes("Natal")) {
-                allChartPlanetsPositions = [];
-            }
+            context.textAlign = 'center';
 
-            const lagnaDegree = referenceLagnaDegree !== null ? referenceLagnaDegree : (chartData.Lagna ? chartData.Lagna.degree : null);
-            if (lagnaDegree === null) {
-                console.error("Lagna degree is missing for chart layer:", chartLabel);
-                return;
-            }
-            const lagnaSignInfo = getSignAndDegreeInSign(lagnaDegree);
-            const lagnaSignIndex = lagnaSignInfo.signIndex;
-            
-            context.save();
-            const rotationOffset = 90;
-            const rotationAngle = (360 - lagnaDegree + rotationOffset) * Math.PI / 180;
-            context.translate(centerX, centerY);
-            context.rotate(rotationAngle);
-            context.translate(-centerX, -centerY);
+            const houseCuspRadius = outerRadius * 0.7;
+            const natalPlanetRingRadius = outerRadius * 0.55;    
+            const centralCircleRadius = outerRadius * 0.15;   
 
-            if(drawGridAndLabels){
-                // Draw radial lines for the 12 houses/signs
-                for (let i = 0; i < 12; i++) {
-                    const angle = (360 - i * 30 - 90) * Math.PI / 180;
-                    context.beginPath();
-                    context.moveTo(centerX + innerRadius * Math.cos(angle), centerY + innerRadius * Math.sin(angle));
-                    context.lineTo(centerX + outerRadius * Math.cos(angle), centerY + outerRadius * Math.sin(angle));
-                    context.strokeStyle = '#d1d5db';
-                    context.lineWidth = 1;
-                    context.stroke();
-                }
+            let combinedOuterRingRadius = 0;
+            let combinedSignRadius = 0;
+            const transitPlanetRingRadius = houseCuspRadius * 1.15; 
 
-                // Highlight the lagna house (House 1)
-                if (isLagnaHouseColored) {
-                    const lagnaHouseStartAngle = (360 - (lagnaSignIndex + 1) * 30 + 90) * Math.PI / 180;
-                    const lagnaHouseEndAngle = (360 - lagnaSignIndex * 30 + 90) * Math.PI / 180;
-                    
-                    context.beginPath();
-                    context.moveTo(centerX, centerY);
-                    context.arc(centerX, centerY, outerRadius, lagnaHouseStartAngle, lagnaHouseEndAngle, false);
-                    context.closePath();
-                    context.fillStyle = lagnaHighlightColor;
-                    context.fill();
-                }
-
-                // Draw Sign Labels and House Numbers
-                for (let i = 0; i < 12; i++) {
-                    const houseNumber = i + 1;
-                    const signIndexForThisHouse = (lagnaSignIndex + i) % 12;
-                    const signAbbr = SIGNS[signIndexForThisHouse];
-                    const houseCenterDegree = (lagnaSignIndex + i) * 30 + 15;
-                    const segmentCenterAngle = (360 - houseCenterDegree + 90) * Math.PI / 180;
-
-                    // Sign Label
-                    context.fillStyle = '#4b5563';
-                    context.font = '14px Inter';
-                    const signPositionRadius = innerRadius + (outerRadius - innerRadius) * 0.85;
-                    context.fillText(signAbbr,
-                        centerX + signPositionRadius * Math.cos(segmentCenterAngle),
-                        centerY + signPositionRadius * Math.sin(segmentCenterAngle));
-                
-                    // House Number
-                    if (!isCombinedChart || chartLabel.includes("Natal")) {
-                         context.fillStyle = '#6b7280';
-                         context.font = '12px Inter';
-                         const houseNumberPositionRadius = innerRadius + (outerRadius - innerRadius) * 0.05;
-                         context.fillText(String(houseNumber),
-                             centerX + houseNumberPositionRadius * Math.cos(segmentCenterAngle),
-                             centerY + houseNumberPositionRadius * Math.sin(segmentCenterAngle));
-                    }
-                }
-            }
-            
-            // --- NEW PLANET DRAWING LOGIC ---
-            let allPlanets = [];
-            for (const body in chartData) {
-                if (body === "Lagna" || !chartData[body] || chartData[body].degree === null) continue;
-                allPlanets.push({ body, degree: chartData[body].degree });
-            }
-            allPlanets.sort((a, b) => a.degree - b.degree);
-
-            let lastPlanetRad = -1000; // Radian angle of the last planet drawn
-            let radiusLevel = 0;
-            const minAngleSeparation = (12 * Math.PI / 180); // 12 degrees
-            const radiusLevels = [
-                innerRadius + (outerRadius - innerRadius) * 0.5,
-                innerRadius + (outerRadius - innerRadius) * 0.2,
-                innerRadius + (outerRadius - innerRadius) * 0.8,
-                innerRadius + (outerRadius - innerRadius) * 0.35,
-                innerRadius + (outerRadius - innerRadius) * 0.65,
-            ];
-
-            allPlanets.forEach(planet => {
-                const { body, degree } = planet;
-                const planetRad = (360 - degree + 90) * Math.PI / 180;
-                
-                let angleDiff = planetRad - lastPlanetRad;
-                if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-                if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-
-                if (Math.abs(angleDiff) < minAngleSeparation) {
-                    radiusLevel = (radiusLevel + 1) % radiusLevels.length;
-                } else {
-                    radiusLevel = 0;
-                }
-                
-                const currentRadius = radiusLevels[radiusLevel];
-                const planetX = centerX + currentRadius * Math.cos(planetRad);
-                const planetY = centerY + currentRadius * Math.sin(planetRad);
+            if (isCombined) {
+                combinedOuterRingRadius = houseCuspRadius * 1.3;
+                combinedSignRadius = combinedOuterRingRadius + 25;
 
                 context.beginPath();
-                context.arc(planetX, planetY, 4, 0, Math.PI * 2);
-                context.fillStyle = PLANET_COLORS[body] || '#000000';
-                context.fill();
-
-                const isPti = highlightPtiPlanets.includes(body);
-                context.fillStyle = isPti ? '#ef4444' : PLANET_COLORS[body];
-                context.font = isPti ? 'bold 14px Inter' : '12px Inter';
-                
-                const textX = centerX + (currentRadius + 12) * Math.cos(planetRad);
-                const textY = centerY + (currentRadius + 12) * Math.sin(planetRad);
-                context.fillText(body, textX, textY);
-                
-                const houseNumber = getHouseOfPlanet(lagnaDegree, degree);
-                const signIndex = (Math.floor(lagnaDegree/30) + houseNumber - 1) % 12;
-                const signAbbr = SIGNS[signIndex];
-                allChartPlanetsPositions.push({
-                    x: textX, y: textY, planet: body, degree: degree.toFixed(2), sign: signAbbr, chart: chartLabel
-                });
-
-                lastPlanetRad = planetRad;
-            });
-            
-            context.restore();
-
-            if (!isCombinedChart) {
-                context.fillStyle = '#374151';
-                context.font = '22px Inter';
-                context.fillText(chartLabel, centerX, centerY);
+                context.arc(centerX, centerY, combinedOuterRingRadius, 0, 2 * Math.PI);
+                context.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                context.lineWidth = 1;
+                context.stroke();
             }
+
+            for (let i = 0; i < 12; i++) {
+                const angle = (270 - i * 30) * Math.PI / 180;
+                const lineEndRadius = isCombined ? combinedOuterRingRadius : houseCuspRadius;
+                context.beginPath();
+                context.moveTo(centerX + centralCircleRadius * Math.cos(angle), centerY + centralCircleRadius * Math.sin(angle));
+                context.lineTo(centerX + lineEndRadius * Math.cos(angle), centerY + lineEndRadius * Math.sin(angle));
+                context.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                context.lineWidth = 1;
+                context.stroke();
+            }
+            
+            context.beginPath();
+            context.arc(centerX, centerY, centralCircleRadius, 0, 2 * Math.PI);
+            context.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            context.lineWidth = 1;
+            context.stroke();
+
+            for (let i = 0; i < 12; i++) {
+                const houseNumber = i + 1;
+                const signIndex = (lagnaSignIndex + i) % 12;
+                const signAbbr = SIGNS[signIndex];
+                const signName = ZODIAC_SIGNS[signAbbr].name;
+                const midAngle = (270 - i * 30 - 15) * Math.PI / 180;
+                
+                context.fillStyle = '#ccc';
+                context.font = 'bold 14px Inter';
+                const houseNumRadius = centralCircleRadius + 15;
+                context.fillText(houseNumber, centerX + houseNumRadius * Math.cos(midAngle), centerY + houseNumRadius * Math.sin(midAngle));
+
+                context.fillStyle = '#eee';
+                context.font = '22px Inter';
+                const signGlyphRadius = isCombined ? combinedSignRadius : (houseCuspRadius * 1.1);
+                context.fillText(SIGN_GLYPHS[signAbbr], centerX + signGlyphRadius * Math.cos(midAngle), centerY + signGlyphRadius * Math.sin(midAngle));
+                context.font = '12px Inter';
+                context.fillText(signName, centerX + signGlyphRadius * Math.cos(midAngle), centerY + signGlyphRadius * Math.sin(midAngle) + 18);
+            }
+
+            const ascLabelAngle = (270 - 15) * Math.PI / 180;
+            context.fillStyle = '#fff';
+            context.font = 'bold 12px Inter';
+            context.fillText('ASC', centerX + (centralCircleRadius + 30) * Math.cos(ascLabelAngle), centerY + (centralCircleRadius + 30) * Math.sin(ascLabelAngle));
+            
+            const placePlanets = (data, radius, label) => {
+                let positions = [];
+                for(const body in data) {
+                    if(body === "Lagna" || !data[body] || data[body].degree === null) continue;
+                    positions.push({ body: body, degree: data[body].degree });
+                }
+                positions.sort((a,b) => a.degree - b.degree);
+
+                let lastAngle = -Infinity;
+                let level = 0;
+                positions.forEach((p) => {
+                    const { signIndex, degreeInSign } = getSignAndDegreeInSign(p.degree);
+                    const houseOfPlanet = (signIndex - lagnaSignIndex + 12) % 12;
+                    const angle = (270 - (houseOfPlanet * 30) - degreeInSign) * Math.PI / 180;
+
+                    if(Math.abs(angle - lastAngle) * (180/Math.PI) < 15) { level = (level + 1) % 3; } else { level = 0; }
+                    const adjustedRadius = radius - (level * 18);
+                    const x = centerX + adjustedRadius * Math.cos(angle);
+                    const y = centerY + adjustedRadius * Math.sin(angle);
+                    
+                    context.fillStyle = PLANET_COLORS[p.body];
+                    context.font = 'bold 20px Inter';
+                    context.fillText(PLANET_GLYPHS[p.body], x, y);
+
+                    context.font = '12px Inter';
+                    context.fillText(p.body, x, y + 15);
+                    
+                    const { sign } = getSignAndDegreeInSign(p.degree);
+                    allChartPlanetsPositions.push({ x: x, y: y, planet: p.body, sign: sign, degreeInSign: degreeInSign, chart: label });
+                    lastAngle = angle;
+                });
+            };
+            
+            placePlanets(chartData, natalPlanetRingRadius, "Natal");
+            if(isCombined && transitData) {
+                placePlanets(transitData, transitPlanetRingRadius, "Transit");
+            }
+
+            context.beginPath();
+            context.arc(centerX, centerY, houseCuspRadius, 0, 2 * Math.PI);
+            context.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            context.lineWidth = 1;
+            context.stroke();
         }
         
         function drawSingleChart(chartData, chartName, highlightPtiPlanets = []) {
-            const canvas = chartCanvas;
-            const context = ctx;
             const baseSize = 800;
-            canvas.width = baseSize;
-            canvas.height = baseSize;
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
+            chartCanvas.width = baseSize;
+            chartCanvas.height = baseSize;
+            const centerX = chartCanvas.width / 2;
+            const centerY = chartCanvas.height / 2;
             const outerRadius = baseSize / 2 - 40;
-            const innerRadius = outerRadius * 0.25;
-
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            
-            drawChartLayer(
-                chartData, chartName, highlightPtiPlanets,
-                context, centerX, centerY, outerRadius, innerRadius,
-                true, '#e0f2fe',
-                true, // drawGridAndLabels = true
-                false // isCombinedChart = false
-            );
-
-            context.beginPath();
-            context.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
-            context.strokeStyle = '#374151';
-            context.lineWidth = 3;
-            context.stroke();
-
-            context.beginPath();
-            context.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
-            context.strokeStyle = '#374151';
-            context.lineWidth = 3;
-            context.stroke();
+            drawWesternChart(chartData, chartName, highlightPtiPlanets, ctx, centerX, centerY, outerRadius);
         }
         
         function drawDualChart(natalData, transitData) {
-            const canvas = dualChartCanvas;
-            const context = dualChartCtx;
             const baseSize = 800;
-            canvas.width = baseSize;
-            canvas.height = baseSize;
-
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            const outerChartOuterRadius = baseSize / 2 - 40;
-            const innerChartOuterRadius = outerChartOuterRadius / 1.2;
-            const innerChartInnerRadius = outerChartOuterRadius * 0.05;
-            const outerChartInnerRadius = innerChartOuterRadius;
-
-            context.clearRect(0, 0, canvas.width, canvas.height);
-
-            const referenceLagna = natalData.Lagna.degree;
-            if (referenceLagna === null) {
-                alert("Natal Lagna data is required to draw the combined chart.");
-                return;
-            }
-
-            // Draw Natal chart (inner ring) WITH the grid and labels
-            drawChartLayer(
-                natalData, "D-1 Natal", ptiResultsData.filter(r => r.pti !== "No PTI found").map(r => r.pti),
-                context, centerX, centerY, innerChartOuterRadius, innerChartInnerRadius,
-                true, '#e0f2fe',
-                true, // drawGridAndLabels = true
-                true, referenceLagna
-            );
-
-            // Draw Transit chart (outer ring) WITHOUT the grid and labels
-            drawChartLayer(
-                transitData, "Transit", [],
-                context, centerX, centerY, outerChartOuterRadius, outerChartInnerRadius,
-                false, '',
-                false, // drawGridAndLabels = false
-                true, referenceLagna
-            );
-            
-            context.beginPath();
-            context.arc(centerX, centerY, outerChartOuterRadius, 0, Math.PI * 2);
-            context.strokeStyle = '#374151';
-            context.lineWidth = 3;
-            context.stroke();
-
-            context.beginPath();
-            context.arc(centerX, centerY, innerChartOuterRadius, 0, Math.PI * 2);
-            context.strokeStyle = '#374151';
-            context.lineWidth = 3;
-            context.stroke();
-
-            context.beginPath();
-            context.arc(centerX, centerY, innerChartInnerRadius, 0, Math.PI * 2);
-            context.strokeStyle = '#374151';
-            context.lineWidth = 3;
-            context.stroke();
+            dualChartCanvas.width = baseSize;
+            dualChartCanvas.height = baseSize;
+            const centerX = dualChartCanvas.width / 2;
+            const centerY = dualChartCanvas.height / 2;
+            const outerRadius = baseSize / 2 - 20;
+            drawWesternChart(natalData, "Combined", [], dualChartCtx, centerX, centerY, outerRadius, true, transitData);
         }
 
         async function promptForPlanetStrengths(planetsToAskFor) {
             return new Promise(resolve => {
                 resolveModalPromise = resolve;
-                modalTitle.textContent = "Input Planet Strengths";
-                modalMessage.textContent = "Please enter the relative strength (e.g., Shadbala value) for the following planets (0-1000, higher is stronger):";
-                modalStrengthInputs.innerHTML = '';
-                planetsToAskFor.forEach(planet => {
-                    const inputGroup = document.createElement('div');
-                    inputGroup.className = 'flex items-center justify-between p-2 border border-gray-200 rounded-md';
-                    inputGroup.innerHTML = `
+                modalStrengthInputs.innerHTML = planetsToAskFor.map(planet => `
+                    <div class="flex items-center justify-between p-2 border border-gray-600 rounded-md">
                         <label for="strength-${planet}" class="font-medium">${planet}:</label>
                         <input type="number" id="strength-${planet}" data-planet="${planet}"
-                               class="w-24 p-1 border border-gray-300 rounded-md text-right"
+                               class="w-24 p-1 bg-gray-800 border border-gray-500 rounded-md text-right"
                                min="0" max="1000" value="${userProvidedPlanetStrengths[planet] || ''}" placeholder="e.g., 500">
-                    `;
-                    modalStrengthInputs.appendChild(inputGroup);
-                });
-                modalConfirmBtn.textContent = "Submit Strengths";
+                    </div>`).join('');
                 modalConfirmBtn.onclick = () => {
-                    const inputs = modalStrengthInputs.querySelectorAll('input[type="number"]');
                     let allValid = true;
-                    inputs.forEach(input => {
-                        const planet = input.dataset.planet;
+                    modalStrengthInputs.querySelectorAll('input').forEach(input => {
                         const value = parseInt(input.value);
-                        if (isNaN(value) || value < 0 || value > 1000) {
-                            allValid = false;
-                            input.style.borderColor = 'red';
-                        } else {
-                            userProvidedPlanetStrengths[planet] = value;
-                            input.style.borderColor = '';
-                        }
+                        if (isNaN(value) || value < 0 || value > 1000) { allValid = false; input.style.borderColor = 'red'; } 
+                        else { userProvidedPlanetStrengths[input.dataset.planet] = value; input.style.borderColor = ''; }
                     });
-                    if (allValid) {
-                        strengthInputModal.classList.remove('show');
-                        resolveModalPromise();
-                    } else {
-                        alert("Please enter valid numerical strengths (0-1000) for all planets.");
-                    }
+                    if (allValid) { strengthInputModal.classList.remove('show'); resolve(); }
                 };
                 strengthInputModal.classList.add('show');
             });
@@ -835,402 +562,164 @@ Ketu      26 Le 11' 53.96&quot; PPha      4    Le   Sc"></textarea>
             const houseSignIndex = (Math.floor(d1LagnaDegree / 30) + houseNumber - 1) % 12;
             const houseSignAbbr = SIGNS[houseSignIndex];
             const houseLord = getLordOfSign(houseSignAbbr);
-            let candidates = [];
-            let selectedPTI = null;
-            let ruleApplied = "No PTI found";
-            let userNote = "";
-            const getEffectiveStrength = (planetName) => {
-                if (userProvidedPlanetStrengths.hasOwnProperty(planetName)) {
-                    return userProvidedPlanetStrengths[planetName];
-                }
-                return 0;
+            
+            const getStrength = p => userProvidedPlanetStrengths[p] || 0;
+            const handleCandidates = async (candidates, rule) => {
+                if (candidates.length === 0) return null;
+                if (candidates.length === 1) return { pti: candidates[0], rule: rule, userNote: "" };
+                const toAsk = candidates.filter(p => !userProvidedPlanetStrengths[p]);
+                if (toAsk.length > 0) await promptForPlanetStrengths(toAsk);
+                candidates.sort((a,b) => getStrength(b) - getStrength(a));
+                return { pti: candidates[0], rule: rule, userNote: "Strongest by numerical strength" };
             };
 
-            const handleMultipleCandidates = async (currentCandidates, rule) => {
-                const planetsToAskFor = currentCandidates.filter(p =>
-                    !userProvidedPlanetStrengths.hasOwnProperty(p)
-                );
-                if (planetsToAskFor.length > 0) {
-                    await promptForPlanetStrengths(planetsToAskFor);
-                }
-                currentCandidates.sort((a, b) => getEffectiveStrength(b) - getEffectiveStrength(a));
-                const strongestPlanet = currentCandidates[0];
-                return { pti: strongestPlanet, rule: rule, userNote: "Strongest by numerical strength" };
-            };
+            let result = 
+                await handleCandidates(PTI_ELIGIBLE_PLANETS.filter(p => d1Chart[p] && getHouseOfPlanet(d1LagnaDegree, d1Chart[p].degree) === houseNumber), "Rule 1: Planet in House") ||
+                await handleCandidates(PTI_ELIGIBLE_PLANETS.filter(p => d1Chart[p] && doesPlanetAspectHouse(p, getHouseOfPlanet(d1LagnaDegree, d1Chart[p].degree), houseNumber)), "Rule 2: Planet Aspects House") ||
+                (PTI_ELIGIBLE_PLANETS.includes(houseLord) ? { pti: houseLord, rule: "Rule 3: House Lord", userNote: "" } : null) ||
+                await handleCandidates(PTI_ELIGIBLE_PLANETS.filter(p => d1Chart[p] && d1Chart[houseLord] && getHouseOfPlanet(d1LagnaDegree, d1Chart[p].degree) === getHouseOfPlanet(d1LagnaDegree, d1Chart[houseLord].degree)), "Rule 4: Planet Conjunct Lord") ||
+                await handleCandidates(PTI_ELIGIBLE_PLANETS.filter(p => d1Chart[p] && d1Chart[houseLord] && doesPlanetAspectPlanet(p, d1Chart[p].degree, d1Chart[houseLord].degree)), "Rule 5: Planet Aspects Lord") ||
+                await handleCandidates(PTI_ELIGIBLE_PLANETS.filter(p => d9Chart[p] && getSignAndDegreeInSign(d9Chart[p].degree).sign === houseSignAbbr), "Rule 6: Planet in D9 Sign");
 
-            candidates = PTI_ELIGIBLE_PLANETS.filter(planet => {
-                if (!d1Chart[planet] || d1Chart[planet].degree === null) return false;
-                return getHouseOfPlanet(d1LagnaDegree, d1Chart[planet].degree) === houseNumber;
-            });
-            if (candidates.length === 1) {
-                selectedPTI = candidates[0];
-                ruleApplied = "Rule 1: Planet Posted in the House (D1)";
-            } else if (candidates.length > 1) {
-                return await handleMultipleCandidates(candidates, "Rule 1: Planet Posted in the House (D1)");
-            }
-            if (selectedPTI) return { pti: selectedPTI, rule: ruleApplied, userNote: userNote };
-            candidates = PTI_ELIGIBLE_PLANETS.filter(planet => {
-                if (!d1Chart[planet] || d1Chart[planet].degree === null) return false;
-                const planetHouse = getHouseOfPlanet(d1LagnaDegree, d1Chart[planet].degree);
-                return doesPlanetAspectHouse(planet, planetHouse, houseNumber);
-            });
-            if (candidates.length === 1) {
-                selectedPTI = candidates[0];
-                ruleApplied = "Rule 2: Planet Aspecting the House (D1)";
-            } else if (candidates.length > 1) {
-                return await handleMultipleCandidates(candidates, "Rule 2: Planet Aspecting the House (D1)");
-            }
-            if (selectedPTI) return { pti: selectedPTI, rule: ruleApplied, userNote: userNote };
-            if (PTI_ELIGIBLE_PLANETS.includes(houseLord)) {
-                selectedPTI = houseLord;
-                ruleApplied = "Rule 3: House Lord (D1)";
-            }
-            if (selectedPTI) return { pti: selectedPTI, rule: ruleApplied, userNote: userNote };
-            candidates = PTI_ELIGIBLE_PLANETS.filter(planet => {
-                if (!d1Chart[planet] || d1Chart[planet].degree === null || !d1Chart[houseLord] || d1Chart[houseLord].degree === null) return false;
-                const planetHouse = getHouseOfPlanet(d1LagnaDegree, d1Chart[planet].degree);
-                const houseLordHouse = getHouseOfPlanet(d1LagnaDegree, d1Chart[houseLord].degree);
-                return planetHouse === houseLordHouse;
-            });
-            if (candidates.length === 1) {
-                selectedPTI = candidates[0];
-                ruleApplied = "Rule 4: Planet Conjoined with House Lord (D1)";
-            } else if (candidates.length > 1) {
-                return await handleMultipleCandidates(candidates, "Rule 4: Planet Conjoined with House Lord (D1)");
-            }
-            if (selectedPTI) return { pti: selectedPTI, rule: ruleApplied, userNote: userNote };
-            candidates = PTI_ELIGIBLE_PLANETS.filter(planet => {
-                if (!d1Chart[planet] || d1Chart[planet].degree === null || !d1Chart[houseLord] || d1Chart[houseLord].degree === null) return false;
-                return doesPlanetAspectPlanet(planet, d1Chart[planet].degree, d1Chart[houseLord].degree);
-            });
-            if (candidates.length === 1) {
-                selectedPTI = candidates[0];
-                ruleApplied = "Rule 5: Planet Aspecting the House Lord (D1)";
-            } else if (candidates.length > 1) {
-                return await handleMultipleCandidates(candidates, "Rule 5: Planet Aspecting the House Lord (D1)");
-            }
-            if (selectedPTI) return { pti: selectedPTI, rule: ruleApplied, userNote: userNote };
-            candidates = PTI_ELIGIBLE_PLANETS.filter(planet => {
-                if (!d9Chart[planet] || d9Chart[planet].degree === null) return false;
-                const planetSignInD9 = getSignAndDegreeInSign(d9Chart[planet].degree).sign;
-                return planetSignInD9 === houseSignAbbr;
-            });
-            if (candidates.length === 1) {
-                selectedPTI = candidates[0];
-                ruleApplied = "Rule 6: Planet in Same Sign in D9";
-            } else if (candidates.length > 1) {
-                return await handleMultipleCandidates(candidates, "Rule 6: Planet in Same Sign in D9");
-            }
-            if (selectedPTI) return { pti: selectedPTI, rule: ruleApplied, userNote: userNote };
-            return { pti: "No PTI found", rule: "N/A", userNote: "" };
+            return result || { pti: "No PTI found", rule: "N/A", userNote: "" };
         }
 
         async function calculateAllPTIs() {
-            if (!parsedChartData) {
-                alert("Please generate charts first by providing natal data.");
-                return;
-            }
-            const d1Chart = parsedChartData['D-1'];
-            const d9Chart = parsedChartData['D-9'];
+            if (!parsedChartData) return;
             ptiResultsData = [];
-            const ptiPlanetsToHighlight = [];
             for (let i = 1; i <= 12; i++) {
-                const result = await findPTIForHouse(i, d1Chart, d9Chart);
+                const result = await findPTIForHouse(i, parsedChartData['D-1'], parsedChartData['D-9']);
                 ptiResultsData.push({ house: i, ...result });
-                if (result.pti !== "No PTI found") {
-                    ptiPlanetsToHighlight.push(result.pti);
-                }
             }
             displayPTIResults(ptiResultsData);
             displayPTIHousesSummary(ptiResultsData);
             if (currentChartType === 'D-1') {
-                drawSingleChart(parsedChartData['D-1'], 'D-1 Chart', ptiPlanetsToHighlight);
+                const ptiPlanets = ptiResultsData.map(r => r.pti).filter(p => p !== "No PTI found");
+                drawSingleChart(parsedChartData['D-1'], 'D-1 Chart', ptiPlanets);
             }
         }
 
         async function analyzeEventTiming(d1Chart, transitChart, ptiResults) {
-            const eventTimingResults = [];
-            const maleficPlanets = ["Mars", "Saturn", "Rahu", "Ketu"];
-            for (let houseNumber = 1; houseNumber <= 12; houseNumber++) {
-                const ptiEntry = ptiResults.find(p => p.house === houseNumber);
-                const ptiPlanet = ptiEntry ? ptiEntry.pti : "No PTI found";
-                let eventLikely = "❌ No";
-                let triggerRules = [];
-                let details = [];
-                if (ptiPlanet === "No PTI found" || !transitChart[ptiPlanet] || transitChart[ptiPlanet].degree === null) {
-                    eventTimingResults.push({
-                        house: houseNumber,
-                        pti: ptiPlanet,
-                        eventLikely: eventLikely,
-                        triggerRules: "-",
-                        details: ptiPlanet === "No PTI found" ? "No PTI identified for this house." : `Transit data for PTI (${ptiPlanet}) is missing.`
-                    });
-                    continue;
-                }
-                const natalLagnaDegree = d1Chart.Lagna.degree;
-                const transitPtiData = transitChart[ptiPlanet];
-                const transitPtiDegree = transitPtiData.degree;
-                const transitPtiSignAbbr = getSignAndDegreeInSign(transitPtiDegree).sign;
-                const houseSignIndex = (Math.floor(natalLagnaDegree / 30) + houseNumber - 1) % 12;
-                const houseSignAbbr = SIGNS[houseSignIndex];
-                const transitPtiHouse = getHouseOfPlanet(natalLagnaDegree, transitPtiDegree);
-                let rule1Triggered = false;
-                if (transitPtiSignAbbr === houseSignAbbr) {
-                    details.push(`Transit ${ptiPlanet} conjuncts house ${houseNumber} (${houseSignAbbr}).`);
-                    rule1Triggered = true;
-                }
-                if (doesPlanetAspectHouse(ptiPlanet, transitPtiHouse, houseNumber)) {
-                    details.push(`Transit ${ptiPlanet} aspects house ${houseNumber}.`);
-                    rule1Triggered = true;
-                }
-                if (rule1Triggered) {
-                    eventLikely = "✅ Yes";
-                    triggerRules.push("Rule 1");
-                }
-                let rule2Triggered = false;
-                if (!rule1Triggered) {
-                    const slowMovingPlanets = ["Jupiter", "Saturn", "Rahu", "Ketu"].filter(p => p !== ptiPlanet);
-                    let influencingPlanetsCount = 0;
-                    let rule2Details = [];
-                    for (const smp of slowMovingPlanets) {
-                        const transitSmpData = transitChart[smp];
-                        if (transitSmpData && transitSmpData.degree !== null) {
-                            const transitSmpHouse = getHouseOfPlanet(natalLagnaDegree, transitSmpData.degree);
-                            const transitSmpSign = getSignAndDegreeInSign(transitSmpData.degree).sign;
-                            
-                            let smpInfluences = [];
-                            if (transitSmpSign === houseSignAbbr) {
-                                smpInfluences.push(`conjuncts house ${houseNumber}`);
-                            }
-                            if (doesPlanetAspectHouse(smp, transitSmpHouse, houseNumber)) {
-                                smpInfluences.push(`aspects house ${houseNumber}.`);
-                            }
-                            if (smpInfluences.length > 0) {
-                                influencingPlanetsCount++;
-                                rule2Details.push(`${smp} ${smpInfluences.join(' or ')}.`);
+            const results = [];
+            for (let i = 1; i <= 12; i++) {
+                const ptiEntry = ptiResults.find(p => p.house === i);
+                const pti = ptiEntry ? ptiEntry.pti : "No PTI found";
+                let likely = "❌ No", rules = [], details = [];
+                
+                if (pti !== "No PTI found" && transitChart[pti]) {
+                    const natalLagna = d1Chart.Lagna.degree;
+                    const transitPtiDegree = transitChart[pti].degree;
+                    const houseSign = SIGNS[(Math.floor(natalLagna / 30) + i - 1) % 12];
+                    const transitPtiSign = getSignAndDegreeInSign(transitPtiDegree).sign;
+                    const transitPtiHouse = getHouseOfPlanet(natalLagna, transitPtiDegree);
+                    
+                    if (transitPtiSign === houseSign || doesPlanetAspectHouse(pti, transitPtiHouse, i)) {
+                        likely = "✅ Yes"; rules.push("Rule 1");
+                        details.push(`Transit ${pti} influences house ${i}.`);
+                    } else {
+                        const slowMovers = ["Jupiter", "Saturn", "Rahu", "Ketu"].filter(p => p !== pti);
+                        const influencingSlowMovers = slowMovers.filter(smp => transitChart[smp] && (getSignAndDegreeInSign(transitChart[smp].degree).sign === houseSign || doesPlanetAspectHouse(smp, getHouseOfPlanet(natalLagna, transitChart[smp].degree), i)));
+                        if (influencingSlowMovers.length >= 2) {
+                            likely = "✅ Yes"; rules.push("Rule 2");
+                            details.push(`${influencingSlowMovers.join(', ')} influence house ${i}.`);
+                        } else {
+                            const houseLord = getLordOfSign(houseSign);
+                            if (d1Chart[houseLord] && transitPtiSign === getSignAndDegreeInSign(d1Chart[houseLord].degree).sign) {
+                                likely = "✅ Yes"; rules.push("Rule 3");
+                                details.push(`Transit ${pti} conjuncts natal ${houseLord}.`);
                             }
                         }
                     }
-                    if (influencingPlanetsCount >= 2) {
-                        eventLikely = "✅ Yes";
-                        triggerRules.push("Rule 2");
-                        details.push(`At least two other slow-moving planets influence house ${houseNumber}: ${rule2Details.join(', ')}.`);
-                        rule2Triggered = true;
+                    
+                    let challenges = [];
+                    if ([6,8,12].includes(transitPtiHouse)) challenges.push(`${pti} in Trika house`);
+                    if (transitChart.Sun && Math.abs(transitPtiDegree - transitChart.Sun.degree) % 360 < COMBUSTION_RANGE_DEGREES) challenges.push(`${pti} is combust`);
+                    if (DEBILITATION_SIGNS[pti] === transitPtiSign) challenges.push(`${pti} is debilitated`);
+                    if (challenges.length > 0) {
+                        rules.push("Rule 4");
+                        details.push(`Challenges: ${challenges.join(', ')}.`);
                     }
                 }
-                let rule3Triggered = false;
-                if (!rule1Triggered && !rule2Triggered) {
-                    const houseLord = getLordOfSign(houseSignAbbr);
-                    const natalHouseLordData = d1Chart[houseLord];
-                    if (natalHouseLordData && natalHouseLordData.degree !== null) {
-                        const natalHouseLordSign = getSignAndDegreeInSign(natalHouseLordData.degree).sign;
-                        if (transitPtiSignAbbr === natalHouseLordSign) {
-                            eventLikely = "✅ Yes";
-                            triggerRules.push("Rule 3");
-                            details.push(`Transit ${ptiPlanet} conjuncts natal ${houseLord}'s sign (${natalHouseLordSign}).`);
-                            rule3Triggered = true;
-                        }
-                    }
-                }
-                let rule4Triggered = false;
-                const transitPtiHouseFromNatalLagna = getHouseOfPlanet(natalLagnaDegree, transitPtiDegree);
-                const trikaHouses = [6, 8, 12];
-                let rule4Details = [];
-                if (trikaHouses.includes(transitPtiHouseFromNatalLagna)) {
-                    rule4Details.push(`Transit ${ptiPlanet} in Trika house ${transitPtiHouseFromNatalLagna} from natal Lagna.`);
-                    rule4Triggered = true;
-                }
-                const transitSunData = transitChart.Sun;
-                if (transitSunData && transitSunData.degree !== null) {
-                    const angleDiff = Math.abs(transitPtiDegree - transitSunData.degree);
-                    const normalizedAngleDiff = Math.min(angleDiff, 360 - angleDiff);
-                    if (normalizedAngleDiff <= COMBUSTION_RANGE_DEGREES) {
-                        rule4Details.push(`Transit ${ptiPlanet} is combust (within ${COMBUSTION_RANGE_DEGREES}° of Sun).`);
-                        rule4Triggered = true;
-                    }
-                }
-                const malefics = ["Mars", "Saturn", "Rahu", "Ketu"];
-                for (const malefic of malefics) {
-                    if (malefic === ptiPlanet) continue;
-                    const transitMaleficData = transitChart[malefic];
-                    if (transitMaleficData && transitMaleficData.degree !== null) {
-                        const transitMaleficSign = getSignAndDegreeInSign(transitMaleficData.degree).sign;
-                        if (transitPtiSignAbbr === transitMaleficSign) {
-                            rule4Details.push(`Transit ${ptiPlanet} conjuncts malefic ${malefic}.`);
-                            rule4Triggered = true;
-                            break;
-                        }
-                    }
-                }
-                const transitPtiSign = getSignAndDegreeInSign(transitPtiDegree).sign;
-                if (DEBILITATION_SIGNS[ptiPlanet] === transitPtiSign) {
-                    rule4Details.push(`Transit ${ptiPlanet} is in its debilitation sign (${transitPtiSign}).`);
-                    rule4Triggered = true;
-                }
-                if (rule4Triggered) {
-                    if (eventLikely === "❌ No") {
-                        eventLikely = "⚠️ Challenging";
-                    } else if (eventLikely === "✅ Yes") {
-                        eventLikely = "✅ Yes (⚠️ Challenging)";
-                    }
-                    triggerRules.push("Rule 4");
-                    details.push(rule4Details.join('; '));
-                }
-                if (triggerRules.length === 0) {
-                    triggerRules.push("-");
-                    details.push("No active influence detected.");
-                }
-                eventTimingResults.push({
-                    house: houseNumber,
-                    pti: ptiPlanet,
-                    eventLikely: eventLikely,
-                    triggerRules: triggerRules.join(', '),
-                    details: details.join('; ')
-                });
+                results.push({ house: i, pti, eventLikely: likely, triggerRules: rules.join(', ') || '-', details: details.join('; ') || 'No active influence.' });
             }
-            return eventTimingResults;
+            return results;
         }
 
         generateChartsBtn.addEventListener('click', () => {
-            const inputText = chartDataInput.value;
-            parsedChartData = parseChartData(inputText);
-            if (parsedChartData && parsedChartData['D-1'] && parsedChartData['D-1'].Lagna && parsedChartData['D-1'].Lagna.degree !== null) {
+            parsedChartData = parseChartData(chartDataInput.value);
+            if (parsedChartData && parsedChartData['D-1'] && parsedChartData['D-1'].Lagna) {
                 outputSection.classList.remove('hidden');
-                chartCanvas.style.width = '100%';
-                chartCanvas.style.height = 'auto';
                 drawSingleChart(parsedChartData['D-1'], 'D-1 Chart');
-                ptiResultsBody.innerHTML = '';
-                eventTimingResultsBody.innerHTML = '';
-                tabD1.classList.add('active');
-                tabD9.classList.remove('active');
-                tabD10.classList.remove('active');
+                ptiResultsBody.innerHTML = ''; eventTimingResultsBody.innerHTML = '';
+                ['tabD1', 'tabD9', 'tabD10'].forEach((t,i) => document.getElementById(t).classList.toggle('active', i===0));
                 currentChartType = 'D-1';
             } else {
                 alert("Please enter valid natal chart data, including Lagna for D-1 chart.");
-                outputSection.classList.add('hidden');
             }
         });
-
-        tabD1.addEventListener('click', () => {
-            currentChartType = 'D-1';
-            tabD1.classList.add('active');
-            tabD9.classList.remove('active');
-            tabD10.classList.remove('active');
-            if (parsedChartData) {
-                const ptiPlanetsToHighlight = ptiResultsData.filter(r => r.pti !== "No PTI found").map(r => r.pti);
-                drawSingleChart(parsedChartData['D-1'], 'D-1 Chart', ptiPlanetsToHighlight);
-            }
-        });
-
-        tabD9.addEventListener('click', () => {
-            currentChartType = 'D-9';
-            tabD1.classList.remove('active');
-            tabD9.classList.add('active');
-            tabD10.classList.remove('active');
-            if (parsedChartData) {
-                drawSingleChart(parsedChartData['D-9'], 'D-9 Chart');
-            }
-        });
-
-        tabD10.addEventListener('click', () => {
-            currentChartType = 'D-10';
-            tabD1.classList.remove('active');
-            tabD9.classList.remove('active');
-            tabD10.classList.add('active');
-            if (parsedChartData) {
-                drawSingleChart(parsedChartData['D-10'], 'D-10 Chart');
-            }
+        
+        ['tabD1', 'tabD9', 'tabD10'].forEach(tabId => {
+            document.getElementById(tabId).addEventListener('click', () => {
+                currentChartType = tabId.replace('tab', '-');
+                ['tabD1', 'tabD9', 'tabD10'].forEach(t => document.getElementById(t).classList.toggle('active', t === tabId));
+                if (parsedChartData) {
+                    const ptiPlanets = ptiResultsData.map(r => r.pti).filter(p => p !== "No PTI found");
+                    drawSingleChart(parsedChartData[currentChartType], `${currentChartType} Chart`, ptiPlanets);
+                }
+            });
         });
 
         findPtiBtn.addEventListener('click', calculateAllPTIs);
 
         showDualChartBtn.addEventListener('click', () => {
-            const inputText = transitDataInput.value;
-            parsedTransitData = parseTransitData(inputText);
-            if (parsedChartData && parsedTransitData && parsedTransitData.Lagna && parsedTransitData.Lagna.degree !== null) {
+            parsedTransitData = parseTransitData(transitDataInput.value);
+            if (parsedChartData && parsedTransitData && parsedTransitData.Lagna) {
                 dualChartSection.classList.remove('hidden');
-                dualChartCanvas.style.width = '100%';
-                dualChartCanvas.style.height = 'auto';
                 drawDualChart(parsedChartData['D-1'], parsedTransitData);
             } else {
-                alert("Please generate natal charts first and ensure valid transit data (including Lagna) is provided.");
-                dualChartSection.classList.add('hidden');
+                alert("Please generate natal charts first and ensure valid transit data is provided.");
             }
         });
 
         analyzeEventTimingBtn.addEventListener('click', async () => {
             if (!parsedChartData || !parsedTransitData || ptiResultsData.length === 0) {
-                alert("Please generate natal charts, input transit data, and find PTI for all houses first.");
-                return;
+                alert("Please generate natal charts, input transit data, and find PTI for all houses first."); return;
             }
             const results = await analyzeEventTiming(parsedChartData['D-1'], parsedTransitData, ptiResultsData);
             displayEventTimingResults(results);
         });
 
         function displayPTIResults(results) {
-            ptiResultsBody.innerHTML = '';
-            results.forEach(result => {
-                const row = ptiResultsBody.insertRow();
-                row.classList.add('hover:bg-gray-50');
-                row.innerHTML = `
-                    <td class="py-3 px-4 whitespace-nowrap">${result.house}</td>
-                    <td class="py-3 px-4 whitespace-nowrap">${result.pti}</td>
-                    <td class="py-3 px-4">${result.rule}</td>
-                    <td class="py-3 px-4">${result.userNote}</td>
-                `;
-            });
+            ptiResultsBody.innerHTML = results.map(r => `
+                <tr class="hover:bg-gray-700">
+                    <td class="py-3 px-4">${r.house}</td> <td class="py-3 px-4">${r.pti}</td>
+                    <td class="py-3 px-4">${r.rule}</td> <td class="py-3 px-4">${r.userNote}</td>
+                </tr>`).join('');
         }
 
         function displayPTIHousesSummary(results) {
-            const ptiHousesSummaryBody = document.getElementById('ptiHousesSummaryBody');
-            ptiHousesSummaryBody.innerHTML = '';
             const ptiMap = {};
-            results.forEach(result => {
-                if (result.pti && result.pti !== "No PTI found") {
-                    if (!ptiMap[result.pti]) {
-                        ptiMap[result.pti] = [];
-                    }
-                    ptiMap[result.pti].push(result.house);
-                }
-            });
-
-            for (const pti in ptiMap) {
-                const row = ptiHousesSummaryBody.insertRow();
-                row.classList.add('hover:bg-gray-50');
-                row.innerHTML = `
-                    <td class="py-3 px-4 whitespace-nowrap">${pti}</td>
-                    <td class="py-3 px-4 whitespace-nowrap">${ptiMap[pti].join(', ')}</td>
-                `;
-            }
+            results.forEach(r => { if (r.pti !== "No PTI found") { if (!ptiMap[r.pti]) ptiMap[r.pti] = []; ptiMap[r.pti].push(r.house); }});
+            ptiHousesSummaryBody.innerHTML = Object.entries(ptiMap).map(([pti, houses]) => `
+                <tr class="hover:bg-gray-700">
+                    <td class="py-3 px-4">${pti}</td> <td class="py-3 px-4">${houses.join(', ')}</td>
+                </tr>`).join('');
             ptiSummarySection.classList.remove('hidden');
         }
 
         function displayEventTimingResults(results) {
-            eventTimingResultsBody.innerHTML = '';
-            results.forEach(result => {
-                const row = eventTimingResultsBody.insertRow();
-                row.classList.add('hover:bg-gray-50');
-                row.innerHTML = `
-                    <td class="py-3 px-4 whitespace-nowrap">${result.house}</td>
-                    <td class="py-3 px-4 whitespace-nowrap">${result.pti}</td>
-                    <td class="py-3 px-4 whitespace-nowrap">${result.eventLikely}</td>
-                    <td class="py-3 px-4">${result.triggerRules}</td>
-                    <td class="py-3 px-4">${result.details}</td>
-                `;
-            });
+            eventTimingResultsBody.innerHTML = results.map(r => `
+                <tr class="hover:bg-gray-700">
+                    <td class="py-3 px-4">${r.house}</td> <td class="py-3 px-4">${r.pti}</td>
+                    <td class="py-3 px-4">${r.eventLikely}</td> <td class="py-3 px-4">${r.triggerRules}</td>
+                    <td class="py-3 px-4">${r.details}</td>
+                </tr>`).join('');
         }
 
         window.addEventListener('resize', () => {
             if (parsedChartData) {
-                const ptiPlanetsToHighlight = ptiResultsData.filter(r => r.pti !== "No PTI found").map(r => r.pti);
-                if (currentChartType === 'D-1') {
-                    drawSingleChart(parsedChartData['D-1'], 'D-1 Chart', ptiPlanetsToHighlight);
-                } else if (currentChartType === 'D-9') {
-                    drawSingleChart(parsedChartData['D-9'], 'D-9 Chart');
-                } else if (currentChartType === 'D-10') {
-                    drawSingleChart(parsedChartData['D-10'], 'D-10 Chart');
-                }
-
+                const ptiPlanets = ptiResultsData.map(r => r.pti).filter(p => p !== "No PTI found");
+                drawSingleChart(parsedChartData[currentChartType], `${currentChartType} Chart`, ptiPlanets);
                 if (!dualChartSection.classList.contains('hidden') && parsedTransitData) {
                     drawDualChart(parsedChartData['D-1'], parsedTransitData);
                 }
@@ -1266,4 +755,6 @@ Ketu      26 Le 11' 53.96" PPha      4    Le   Sc`;
     </script>
 </body>
 </html>
+
+
 
