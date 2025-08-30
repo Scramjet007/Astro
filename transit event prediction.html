@@ -247,7 +247,6 @@
         let userProvidedPlanetStrengths = { "Rahu": 100, "Ketu": 100 };
         let allChartPlanetsPositions = [];
         
-        // ... (rest of the variable declarations are the same) ...
         const chartDataInput = document.getElementById('chartDataInput');
         const generateChartsBtn = document.getElementById('generateChartsBtn');
         const outputSection = document.getElementById('outputSection');
@@ -428,7 +427,7 @@
             }
 
             for (let i = 0; i < 12; i++) {
-                const angle = (270 - i * 30) * Math.PI / 180;
+                const angle = (285 - i * 30) * Math.PI / 180;
                 const lineEndRadius = isCombined ? combinedOuterRingRadius : houseCuspRadius;
                 context.beginPath();
                 context.moveTo(centerX + centralCircleRadius * Math.cos(angle), centerY + centralCircleRadius * Math.sin(angle));
@@ -449,7 +448,7 @@
                 const signIndex = (lagnaSignIndex + i) % 12;
                 const signAbbr = SIGNS[signIndex];
                 const signName = ZODIAC_SIGNS[signAbbr].name;
-                const midAngle = (270 - i * 30 - 15) * Math.PI / 180;
+                const midAngle = (270 - i * 30) * Math.PI / 180;
                 
                 context.fillStyle = '#ccc';
                 context.font = 'bold 14px Inter';
@@ -464,7 +463,7 @@
                 context.fillText(signName, centerX + signGlyphRadius * Math.cos(midAngle), centerY + signGlyphRadius * Math.sin(midAngle) + 18);
             }
 
-            const ascLabelAngle = (270 - 15) * Math.PI / 180;
+            const ascLabelAngle = (270) * Math.PI / 180;
             context.fillStyle = '#fff';
             context.font = 'bold 12px Inter';
             context.fillText('ASC', centerX + (centralCircleRadius + 30) * Math.cos(ascLabelAngle), centerY + (centralCircleRadius + 30) * Math.sin(ascLabelAngle));
@@ -482,7 +481,7 @@
                 positions.forEach((p) => {
                     const { signIndex, degreeInSign } = getSignAndDegreeInSign(p.degree);
                     const houseOfPlanet = (signIndex - lagnaSignIndex + 12) % 12;
-                    const angle = (270 - (houseOfPlanet * 30) - degreeInSign) * Math.PI / 180;
+                    const angle = (285 - (houseOfPlanet * 30) - degreeInSign) * Math.PI / 180;
 
                     if(Math.abs(angle - lastAngle) * (180/Math.PI) < 15) { level = (level + 1) % 3; } else { level = 0; }
                     const adjustedRadius = radius - (level * 18);
@@ -660,7 +659,7 @@
         
         ['tabD1', 'tabD9', 'tabD10'].forEach(tabId => {
             document.getElementById(tabId).addEventListener('click', () => {
-                currentChartType = tabId.replace('tab', '-');
+                currentChartType = `D-${tabId.substring(3)}`;
                 ['tabD1', 'tabD9', 'tabD10'].forEach(t => document.getElementById(t).classList.toggle('active', t === tabId));
                 if (parsedChartData) {
                     const ptiPlanets = ptiResultsData.map(r => r.pti).filter(p => p !== "No PTI found");
@@ -755,6 +754,4 @@ Ketu      26 Le 11' 53.96" PPha      4    Le   Sc`;
     </script>
 </body>
 </html>
-
-
 
