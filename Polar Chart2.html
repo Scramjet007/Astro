@@ -1,0 +1,1932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polar Horoscope Chart Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        /* Import Inter font for modern typography */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Dark blue-gray background for a dark theme */
+            color: #e2e8f0; /* Light text color for contrast */
+        }
+        /* Custom styles for the SVG chart container to give it a card-like appearance */
+        .chart-container {
+            border-radius: 1.5rem; /* Rounded corners */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.15); /* Darker shadow */
+            background-color: #2d3748; /* Darker background for chart container */
+            position: relative; /* Needed for tooltip positioning */
+            display: flex; /* Use flexbox for centering SVG */
+            align-items: center;
+            justify-content: center;
+            width: 100%; /* Make chart container take full width */
+            padding-bottom: 100%; /* Maintain aspect ratio (1:1) for chart */
+            position: relative; /* For absolute positioning of SVG inside */
+        }
+        svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block; /* Remove extra space below SVG */
+        }
+
+        /* Styling for the house division lines */
+        .house-line {
+            stroke: #a0aec0; /* Lighter gray for lines on dark background */
+            stroke-width: 1;
+        }
+        /* General text styling within the chart */
+        .rasi-text, .chart-title, .rasi-chakra-signature {
+            fill: #e2e8f0; /* Light text for readability */
+            font-weight: 600; /* Semi-bold for emphasis */
+        }
+        /* Styling for planet symbols to make them stand out */
+        .planet-symbol {
+            font-size: 1.5em; /* Larger size for symbols */
+        }
+        /* Styling for planet degree labels */
+        .planet-text {
+            font-size: 0.7em; /* Smaller font for degrees */
+        }
+
+        /* Color schemes for Zodiac Signs based on their element */
+        .fire-sign { fill: #f87171; } /* Lighter red for dark theme */
+        .earth-sign { fill: #4ade80; } /* Lighter green for dark theme */
+        .air-sign { fill: #fcd34d; } /* Lighter yellow/orange for dark theme */
+        .water-sign { fill: #60a5fa; } /* Lighter blue for dark theme */
+
+        /* Color coding for House Classifications in the info panel (these panels are removed, but keeping classes just in case) */
+        .kendra-house { background-color: #38a169; } /* Darker Green */
+        .trikona-house { background-color: #2b6cb0; } /* Darker Blue */
+        .dusthana-house { background-color: #e53e3e; } /* Darker Red */
+        .upachaya-house { background-color: #c53030; } /* Darker Red */
+        .moksha-house { background-color: #3182ce; }
+        .kama-house { background-color: #d69e2e; }
+        .artha-house { background-color: #4299e1; }
+        .neutral-house { background-color: #4a5568; }
+
+
+        /* Tooltip styling for planetary details on hover */
+        #planet-tooltip, #sign-tooltip, #house-tooltip, #nakshatra-tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent dark background */
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            pointer-events: none; /* Allows mouse events to pass through */
+            opacity: 0; /* Hidden by default */
+            transition: opacity 0.2s ease-in-out; /* Smooth fade effect */
+            z-index: 1000; /* Ensure it appears on top */
+            max-width: 250px; /* Set a max width to encourage wrapping and a better height/width ratio */
+            box-sizing: border-box; /* Include padding in max-width calculation */
+        }
+        #planet-tooltip.active, #sign-tooltip.active, #house-tooltip.active, #nakshatra-tooltip.active {
+            opacity: 1; /* Show when active */
+        }
+
+        /* Styling for error messages */
+        .error-message {
+            color: #f56565; /* Lighter red for visibility on dark background */
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        /* Responsive adjustments for smaller screens */
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr; /* Stack columns on small screens */
+            }
+            .chart-container, .input-section {
+                padding: 1rem; /* Reduced padding */
+            }
+            .chart-container {
+                min-height: 400px; /* Ensure chart has adequate height */
+            }
+        }
+
+        /* New CSS for highlighting houses/signs on hover */
+        /* Specific colors for aspects */
+        .highlighted-benefic {
+            fill: rgba(0, 255, 0, 0.3); /* Green overlay */
+            stroke: limegreen;
+            stroke-width: 2;
+            transition: fill 0.3s ease, stroke 0.3s ease, stroke-width 0.3s ease;
+        }
+        .highlighted-malefic {
+            fill: rgba(255, 0, 0, 0.3); /* Red overlay */
+            stroke: red;
+            stroke-width: 2;
+            transition: fill 0.3s ease, stroke 0.3s ease, stroke-width 0.3s ease;
+        }
+        .highlighted-mixed {
+            fill: rgba(255, 165, 0, 0.3); /* Orange overlay for mixed */
+            stroke: orange;
+            stroke-width: 2;
+            transition: fill 0.3s ease, stroke 0.3s ease, stroke-width 0.3s ease;
+        }
+        /* Default highlight for the hovered segment itself, if no specific aspect type is determined */
+        .highlighted-self {
+             fill: rgba(255, 255, 0, 0.3); /* Yellow overlay for self-highlight */
+            stroke: yellow;
+            stroke-width: 2;
+            transition: fill 0.3s ease, stroke 0.3s ease, stroke-width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-gray-800 rounded-xl shadow-lg p-6 md:p-10"> <!-- Removed max-w-7xl mx-auto -->
+        <h1 class="text-3xl md:text-4xl font-bold text-center mb-6 text-gray-100">Vedic Horoscope Chart in Polar Format (Parāśara System)
+        </h1>
+        <p class="text-center text-gray-400 mb-8 rasi-chakra-signature">Created by Deepak Jain</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8 main-grid">
+            <!-- Data Input Section -->
+            <div class="input-section bg-gray-700 p-6 rounded-lg shadow-inner md:col-span-1">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-200">Jagannath Hora Data Input</h2>
+                <textarea id="jagannathHoraData"
+                          class="w-full p-3 border border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm h-64 md:h-96 bg-gray-900 text-gray-100"
+                          placeholder="Paste your Jagannath Hora planetary longitude data here, e.g.:
+
+Body            Longitude        Nakshatra Pada Rasi Navamsa
+Lagna           11 Le 21' 54.56&quot; Magh      4    Le   Cn
+Sun - DK         0 Ge 11' 25.18&quot; Mrig      3    Ge   Li
+Moon - AmK      15 Cp 44' 05.59&quot; Srav      2    Cp   Ta
+Mars - PK        4 Le 37' 13.96&quot; Magh      2    Le   Ta
+Mercury - AK    17 Ge 49' 04.08&quot; Ardr      4    Ge   Pi
+Jupiter - PiK    7 Ge 01' 38.44&quot; Ardr      1    Ge   Sg
+Venus - BK      14 Ar 58' 48.74&quot; Bhar      1    Ar   Le
+Saturn - MK      7 Pi 05' 28.00&quot; UBha      2    Pi   Vi
+Rahu - GK       28 Aq 33' 04.46&quot; PBha      3    Aq   Ge
+Ketu            28 Le 33' 04.46&quot; UPha      1    Le   Sg"></textarea>
+                <button id="generateChartBtn"
+                        class="mt-4 w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-200 ease-in-out">
+                    Generate Chart
+                </button>
+                <div id="errorMessages" class="error-message mt-2 hidden"></div>
+            </div>
+
+            <!-- Chart Display Section -->
+            <div class="chart-container flex items-center justify-center p-4 md:col-span-3">
+                <div id="chart-svg-container" class="w-full h-full flex items-center justify-center">
+                    <svg id="polar-chart" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid meet">
+                        <!-- This group will contain all fixed elements that don't rotate with the chart (e.g., outer degree markings) -->
+                        <g id="chart-fixed-elements"></g>
+                        <!-- This group will contain all rotatable elements (houses, zodiacs, planets, central info) -->
+                        <g id="chart-rotatable-elements" transform="rotate(0, 500, 500)"></g>
+                    </svg>
+                </div>
+                <!-- Tooltip for displaying planet details on hover -->
+                <div id="planet-tooltip"></div>
+                <!-- Tooltip for displaying sign details on hover -->
+                <div id="sign-tooltip"></div>
+                <!-- Tooltip for displaying house details on hover -->
+                <div id="house-tooltip"></div>
+                <!-- Tooltip for displaying nakshatra details on hover -->
+                <div id="nakshatra-tooltip"></div>
+            </div>
+        </div>
+
+        <!-- Information Panels - REMOVED AS PER USER REQUEST -->
+        <!-- <div class="mt-8 bg-gray-50 p-6 rounded-lg shadow-inner">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-700">Chart Details</h2>
+            <div id="chart-details-panel" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-gray-700">
+                <div id="planetary-info" class="p-3 border rounded-md bg-white">
+                    <h3 class="font-semibold mb-2">Planetary Positions</h3>
+                    <ul id="planetary-list">
+                    </ul>
+                </div>
+                <div id="house-info" class="p-3 border rounded-md bg-white">
+                    <h3 class="font-semibold mb-2">House Classifications</h3>
+                    <ul id="house-list">
+                    </ul>
+                </div>
+                <div id="nakshatra-info" class="p-3 border rounded-md bg-white">
+                    <h3 class="font-semibold mb-2">Nakshatra Details</h3>
+                    <ul id="nakshatra-list">
+                    </ul>
+                </div>
+            </div>
+        </div> -->
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Get DOM elements
+            const jagannathHoraDataTextarea = document.getElementById('jagannathHoraData');
+            const generateChartBtn = document.getElementById('generateChartBtn');
+            const errorMessagesDiv = document.getElementById('errorMessages');
+            const polarChartSvg = document.getElementById('polar-chart');
+            const chartSvgContainer = document.getElementById('chart-svg-container');
+            const planetTooltip = document.getElementById('planet-tooltip');
+            const signTooltip = document.getElementById('sign-tooltip');
+            const houseTooltip = document.getElementById('house-tooltip');
+            const nakshatraTooltip = document.getElementById('nakshatra-tooltip');
+            // Removed references to info panels here
+            const chartFixedElementsGroup = document.getElementById('chart-fixed-elements');
+            const chartRotatableElementsGroup = document.getElementById('chart-rotatable-elements');
+
+            // Get the chart container for relative positioning
+            const chartContainer = document.querySelector('.chart-container');
+
+            // Global variables to store parsed data and first house start degree for aspect calculations
+            let parsedPlanetsGlobal = [];
+            let firstHouseStartDegreeGlobal = 0;
+
+
+            // Define chart dimensions and radii for concentric rings
+            const CHART_RADIUS = 450; // Main radius of the chart
+            const CENTER_X = 500;     // Center X coordinate of the SVG viewBox
+            const CENTER_Y = 500;     // Center Y coordinate of the SVG viewBox
+            const HOUSE_RING_INNER_RADIUS = 200; // Innermost ring for house numbers
+            const PLANET_RING_INNER_RADIUS = 250; // Ring where planets are plotted
+            const ZODIAC_RING_INNER_RADIUS = 300; // Ring for Zodiac signs (outer edge of filled segments)
+
+            // Rings for Nakshatra Name and Lord
+            const NAKSHATRA_NAME_RING_INNER_RADIUS = 165;
+            const NAKSHATRA_LORD_RING_INNER_RADIUS = 135;
+            const CENTER_RING_RADIUS = 100; // Innermost circle for Lagna details
+
+
+            // Define Zodiac Signs with their properties (name, symbol, starting degree, color class, lord, and new properties)
+            const ZODIAC_SIGNS = {
+                'Ar': {
+                    name: ' Aries', symbol: '♈', startDegree: 0, colorClass: '#f87171', lord: 'Mars',
+                    type: 'Chara (Cardinal)', gender: 'Male', element: 'Fire', temperament: 'Bilious (Pitta)', guna: 'Rajas',
+                    bodyPart: 'Head, Brain', risingPart: 'Sirshodaya',
+                    significations: [
+                        "Boldness and courage", "Leadership and initiative", "Impatience and impulsiveness",
+                        "Warrior-like nature", "Pioneering spirit", "Headstrong and determined",
+                        "Adventurous and competitive", "Fiery temperament", "Quick decision-making",
+                        "Ruled by Mars – valor and aggression"
+                    ]
+                },
+                'Ta': {
+                    name: ' Taurus', symbol: '♉', startDegree: 30, colorClass: '#4ade80', lord: 'Venus',
+                    type: 'Sthira (Fixed)', gender: 'Female', element: '  Earth', temperament: 'Windy (Vata)', guna: 'Tamas',
+                    bodyPart: 'Face, Neck', risingPart: 'Prishtodaya',
+                    significations: [
+                        "Stability and patience", "Love for luxury and comfort", "Strong physical constitution",
+                        "Possessiveness and materialism", "Steadfast and determined", "Fondness for music and arts",
+                        "Financial acumen", "Sensual and affectionate nature", "Earthy and grounded",
+                        "Ruled by Venus – beauty and pleasure"
+                    ]
+                },
+                'Ge': {
+                    name: ' Gemini', symbol: '♊', startDegree: 60, colorClass: '#fcd34d', lord: 'Mercury',
+                    type: 'Dwiswabhav', gender: 'Male', element: 'Air', temperament: 'Bilious (Pitta)', guna: 'Rajas',
+                    bodyPart: 'Shoulders, Arms', risingPart: 'Sirshodaya',
+                    significations: [
+                        "Intelligence and wit", "Communication skills", "Duality and versatility",
+                        "Curiosity and learning", "Writing and speaking abilities", "Adaptability and mobility",
+                        "Youthful and lively", "Fondness for travel and networking", "Airy and intellectual",
+                        "Ruled by Mercury – logic and analysis"
+                    ]
+                },
+                'Cn': {
+                    name: ' Cancer', symbol: '♋', startDegree: 90, colorClass: '#60a5fa', lord: 'Moon',
+                    type: 'Chara (Cardinal)', gender: 'Female', element: 'Water', temperament: 'Phlegmatic (Kapha)', guna: 'Sattva',
+                    bodyPart: 'Chest, Stomach', risingPart: 'Prishtodaya',
+                    significations: [
+                        "Emotional sensitivity", "Protectiveness and nurturing", "Love for home and family",
+                        "Moody and changeable", "Intuitive and empathetic", "Artistic and imaginative",
+                        "Soft-spoken and caring", "Attachment to the past", "Watery and receptive",
+                        "Ruled by Moon – mind and emotions"
+                    ]
+                },
+                'Le': {
+                    name: ' Leo', symbol: '♌', startDegree: 120, colorClass: '#f87171', lord: 'Sun',
+                    type: 'Sthira (Fixed)', gender: 'Male', element: 'Fire', temperament: 'Bilious (Pitta)', guna: 'Rajas',
+                    bodyPart: 'Heart, Back', risingPart: 'Sirshodaya',
+                    significations: [
+                        "Authority and leadership", "Pride and dignity", "Ambition and confidence",
+                        "Noble and generous heart", "Strong will and determination", "Love for power and recognition",
+                        "Warmth and loyalty", "Courageous and bold", "Fiery and commanding",
+                        "Ruled by Sun – soul and ego"
+                    ]
+                },
+                'Vi': {
+                    name: ' Virgo', symbol: '♍', startDegree: 150, colorClass: '#4ade80', lord: 'Mercury',
+                    type: 'Dwiswabhav', gender: 'Female', element: '  Earth', temperament: 'Windy (Vata)', guna: 'Tamas',
+                    bodyPart: 'Abdomen, Intestines', risingPart: 'Sirshodaya',
+                    significations: [
+                        "Analytical and detail-oriented", "Perfectionist tendencies", "Logical and practical thinking",
+                        "Shyness and modesty", "Cleanliness and orderliness", "Good in service and healing",
+                        "Critical and discerning", "Skilled in crafts and calculation", "Earthy and meticulous",
+                        "Ruled by Mercury – intellect and precision"
+                    ]
+                },
+                'Li': {
+                    name: ' Libra', symbol: '♎', startDegree: 180, colorClass: '#fcd34d', lord: 'Venus',
+                    type: 'Chara (Cardinal)', gender: 'Male', element: 'Air', temperament: 'Bilious (Pitta)', guna: 'Rajas',
+                    bodyPart: 'Navel, Loins', risingPart: 'Sirshodaya',
+                    significations: [
+                        "Balance and harmony", "Diplomatic and just", "Aesthetic and refined tastes",
+                        "Love for relationships", "Indecisiveness and dependency", "Graceful and charming",
+                        "Desire for social interaction", "Sense of fairness and law", "Airy and relational",
+                        "Ruled by Venus – love and art"
+                    ]
+                },
+                'Sc': {
+                    name: ' Scorpio', symbol: '♏', startDegree: 210, colorClass: '#60a5fa', lord: 'Mars',
+                    type: 'Sthira (Fixed)', gender: 'Female', element: 'Water', temperament: 'Phlegmatic (Kapha)', guna: 'Tamas',
+                    bodyPart: 'Genitals, Anus', risingPart: 'Sirshodaya',
+                    significations: [
+                        "Intensity and secrecy", "Passionate and magnetic", "Strong will and focus",
+                        "Emotional depth", "Mystical and transformative", "Vengeful and determined",
+                        "Good in research and investigation", "Protective and loyal", "Watery and penetrating",
+                        "Ruled by Mars – hidden strength and drive"
+                    ]
+                },
+                'Sg': {
+                    name: ' Sagittarius', symbol: '♐', startDegree: 240, colorClass: '#f87171', lord: 'Jupiter',
+                    type: 'Dwiswabhava', gender: 'Male', element: 'Fire', temperament: 'Bilious (Pitta)', guna: 'Sattva',
+                    bodyPart: 'Thighs, Hips', risingPart: 'Sirshodaya',
+                    significations: [
+                        "Optimism and enthusiasm", "Wisdom and higher learning", "Love for travel and exploration",
+                        "Philosophical mindset", "Moral and ethical", "Spiritual and devotional",
+                        "Independent and freedom-loving", "Adventurous and sporty", "Fiery and visionary",
+                        "Ruled by Jupiter – expansion and dharma"
+                    ]
+                },
+                'Cp': {
+                    name: ' Capricorn', symbol: '♑', startDegree: 270, colorClass: '#4ade80', lord: 'Saturn',
+                    type: 'Chara (Cardinal)', gender: 'Female', element: 'Earth', temperament: 'Windy (Vata)', guna: 'Tamas',
+                    bodyPart: 'Knees, Joints', risingPart: 'Prishtodaya',
+                    significations: [
+                        "Discipline and perseverance", "Ambition and practicality", "Responsibility and duty",
+                        "Patience and hard work", "Serious and reserved", "Organizational skills",
+                        "Mastery over time and karma", "Realistic and result-oriented", "Earthy and enduring",
+                        "Ruled by Saturn – structure and endurance"
+                    ]
+                },
+                'Aq': {
+                    name: ' Aquarius', symbol: '♒', startDegree: 300, colorClass: '#fcd34d', lord: 'Saturn',
+                    type: 'Sthira (Fixed)', gender: 'Male', element: 'Air', temperament: 'Windy (Vata)', guna: 'Rajas',
+                    bodyPart: 'Calves, Ankles', risingPart: 'Sirshodaya',
+                    significations: [
+                        "Innovative and unconventional", "Humanitarian and socially aware", "Detached and philosophical",
+                        "Inventive and scientific", "Visionary and futuristic", "Original thinker",
+                        "Stubborn and fixed ideas", "Interest in collective progress", "Airy and intellectual",
+                        "Ruled by Saturn – discipline and reforms"
+                    ]
+                },
+                'Pi': {
+                    name: ' Pisces', symbol: '♓', startDegree: 330, colorClass: '#60a5fa', lord: 'Jupiter',
+                    type: 'Dwiswabhava', gender: 'Female', element: 'Water', temperament: 'Phlegmatic (Kapha)', guna: 'Sattva',
+                    bodyPart: 'Feet', risingPart: 'Ubhayodaya',
+                    significations: [
+                        "Compassionate and empathetic", "Spiritual and intuitive", "Dreamy and imaginative",
+                        "Escapist and idealistic", "Artistic and poetic", "Self-sacrificing and forgiving",
+                        "Adaptable and impressionable", "Love for solitude and mysticism", "Watery and emotional",
+                        "Ruled by Jupiter – wisdom and moksha"
+                    ]
+                },
+            };
+
+            // Define Nakshatra data (name, start/end degrees, lord) - 27 Nakshatras each 13°20'
+            const NAKSHATRAS = [
+                { name: 'Ashwini', startDeg: 0, endDeg: 13.3333, lord: 'Ketu', deity: 'Ashwini Kumaras', symbol: 'Horse\'s Head', keyTraits: 'Healing, innovation, leadership', professions: 'Doctors, athletes', health: 'Nervous system', spiritualAim: 'Dharma', caste: 'Vaishya', guna: 'Rajas', mythologicalLink: 'Celestial physicians restoring vitality' },
+                { name: 'Bharani', startDeg: 13.3333, endDeg: 26.6667, lord: 'Venus', deity: 'Yama', symbol: 'Yoni', keyTraits: 'Discipline, sensuality, endurance', professions: 'Surgeons, artists', health: 'Reproductive organs', spiritualAim: 'Artha', caste: 'Shudra', guna: 'Tamas', mythologicalLink: 'Governs death/rebrith cycles' },
+                { name: 'Krittika', startDeg: 26.6667, endDeg: 40, lord: 'Sun', deity: 'Agni', symbol: 'Razor', keyTraits: 'Courage, ambition, criticism', professions: 'Chefs, soldiers', health: 'Digestive fire', spiritualAim: 'Kama', caste: 'Brahmin', guna: 'Rajas-Tamas', mythologicalLink: 'Purifying fire of transformation' },
+                { name: 'Rohini', startDeg: 40, endDeg: 53.3333, lord: 'Moon', deity: 'Brahma', symbol: 'Ox Cart', keyTraits: 'Creativity, materialism, fertility', professions: 'Farmers, architects', health: 'Throat/thyroid', spiritualAim: 'Moksha', caste: 'Kshatriya', guna: 'Sattva', mythologicalLink: 'Moon\'s favorite wife, abundance' },
+                { name: 'Mrigashira', startDeg: 53.3333, endDeg: 66.6667, lord: 'Mars', deity: 'Soma', symbol: 'Deer\'s Head', keyTraits: 'Curiosity, wanderlust, indecision', professions: 'Explorers, writers', health: 'Respiratory system', spiritualAim: 'Dharma', caste: 'Shudra', guna: 'Rajas', mythologicalLink: 'Search for truth' },
+                { name: 'Ardra', startDeg: 66.6667, endDeg: 80, lord: 'Rahu', deity: 'Rudra', symbol: 'Teardrop', keyTraits: 'Resilience, obsession, technical skill', professions: 'Scientists, miners', health: 'Mental health', spiritualAim: 'Moksha', caste: 'Outcaste', guna: 'Tamas', mythologicalLink: 'Shiva\'s destructive power' },
+                { name: 'Punarvasu', startDeg: 80, endDeg: 93.3333, lord: 'Jupiter', deity: 'Aditi', symbol: 'Quiver', keyTraits: 'Optimism, adaptability, dependency', professions: 'Teachers, counselors', health: 'Liver', spiritualAim: 'Artha', caste: 'Vaishya', guna: 'Sattva-Rajas', mythologicalLink: 'Renewal through divine motherhood' },
+                { name: 'Pushya', startDeg: 93.3333, endDeg: 106.6667, lord: 'Saturn', deity: 'Brihaspati', symbol: 'Cow\'s Udder', keyTraits: 'Organization, tradition, rigidity', professions: 'Priests, bankers', health: 'Stomach', spiritualAim: 'Dharma', caste: 'Brahmin', guna: 'Sattva', mythologicalLink: 'Most auspicious for rituals' },
+                { name: 'Ashlesha', startDeg: 106.6667, endDeg: 120, lord: 'Mercury', deity: 'Nagas', symbol: 'Coiled Serpent', keyTraits: 'Hypnotic charm, secrecy, jealousy', professions: 'Hypnotists, spies', health: 'Intestinal issues', spiritualAim: 'Kama', caste: 'Outcaste', guna: 'Tamas', mythologicalLink: 'Kundalini energy' },
+                { name: 'Magha', startDeg: 120, endDeg: 133.3333, lord: 'Ketu', deity: 'Pitris', symbol: 'Royal Throne', keyTraits: 'Authority, legacy, arrogance', professions: 'Leaders, historians', health: 'Heart', spiritualAim: 'Moksha', caste: 'Kshatriya', guna: 'Tamas', mythologicalLink: 'Ancestral blessings' },
+                { name: 'Purva Phalguni', startDeg: 133.3333, endDeg: 146.6667, lord: 'Venus', deity: 'Aryaman', symbol: 'Bed Front', keyTraits: 'Romance, luxury, laziness', professions: 'Designers, musicians', health: 'Reproductive system', spiritualAim: 'Kama', caste: 'Vaishya', guna: 'Rajas', mythologicalLink: 'Social harmony' },
+                { name: 'Uttara Phalguni', startDeg: 146.6667, endDeg: 160, lord: 'Sun', deity: 'Bhaga', symbol: 'Bed Legs', keyTraits: 'Charity, marriage, diplomacy', professions: 'Social workers', health: 'Digestive system', spiritualAim: 'Artha', caste: 'Brahmin', guna: 'Sattva-Rajas', mythologicalLink: 'Shared resources' },
+                { name: 'Hasta', startDeg: 160, endDeg: 173.3333, lord: 'Moon', deity: 'Savitur', symbol: 'Hand', keyTraits: 'Skillful, humorous, critical', professions: 'Craftsmen, comedians', health: 'Hands', spiritualAim: 'Dharma', caste: 'Shudra', guna: 'Rajas', mythologicalLink: 'Solar creativity' },
+                { name: 'Chitra', startDeg: 173.3333, endDeg: 186.6667, lord: 'Mars', deity: 'Vishwakarma', symbol: 'Bright Jewel', keyTraits: 'Artistic, vain, strategic', professions: 'Architects, jewelers', health: 'Skin', spiritualAim: 'Kama', caste: 'Vaishya', guna: 'Tamas', mythologicalLink: 'Divine craftsmanship' },
+                { name: 'Swati', startDeg: 186.6667, endDeg: 200, lord: 'Rahu', deity: 'Vayu', symbol: 'Coral Shoot', keyTraits: 'Independence, restlessness, adaptability', professions: 'Traders, diplomats', health: 'Lungs', spiritualAim: 'Moksha', caste: 'Outcaste', guna: 'Rajas', mythologicalLink: 'Wind\'s freedom' },
+                { name: 'Vishakha', startDeg: 200, endDeg: 213.3333, lord: 'Jupiter', deity: 'Indra-Agni', symbol: 'Triumphal Arch', keyTraits: 'Competitive, goal-oriented, stubborn', professions: 'Athletes, lawyers', health: 'Kidneys', spiritualAim: 'Artha', caste: 'Kshatriya', guna: 'Rajas-Tamas', mythologicalLink: 'Celestial fire rituals' },
+                { name: 'Anuradha', startDeg: 213.3333, endDeg: 226.6667, lord: 'Saturn', deity: 'Mitra', symbol: 'Lotus', keyTraits: 'Loyalty, occultism, isolation', professions: 'Researchers, mystics', health: 'Bladder', spiritualAim: 'Dharma', caste: 'Brahmin', guna: 'Sattva', mythologicalLink: 'Cosmic friendship' },
+                { name: 'Jyeshtha', startDeg: 226.6667, endDeg: 240, lord: 'Mercury', deity: 'Indra', symbol: 'Umbrella', keyTraits: 'Power struggles, protection, jealousy', professions: 'Military, security', health: 'Genitals', spiritualAim: 'Kama', caste: 'Shudra', guna: 'Tamas', mythologicalLink: 'Indra\'s sovereignty' },
+                { name: 'Mula', startDeg: 240, endDeg: 253.3333, lord: 'Ketu', deity: 'Nirriti', symbol: 'Roots', keyTraits: 'Destruction, research, radicalism', professions: 'Surgeons, exorcists', health: 'Rectum', spiritualAim: 'Moksha', caste: 'Outcaste', guna: 'Tamas', mythologicalLink: 'Root of existence' },
+                { name: 'Purva Ashadha', startDeg: 253.3333, endDeg: 266.6667, lord: 'Venus', deity: 'Apah', symbol: 'Elephant Tusk', keyTraits: 'Charisma, persistence, aggression', professions: 'Politicians, sailors', health: 'Hips', spiritualAim: 'Artha', caste: 'Vaishya', guna: 'Rajas', mythologicalLink: 'Invincible waters' },
+                { name: 'Uttara Ashadha', startDeg: 266.6667, endDeg: 280, lord: 'Sun', deity: 'Vishvedevas', symbol: 'Elephant Tusk', keyTraits: 'Dignity, leadership, rigidity', professions: 'CEOs, judges', health: 'Bones', spiritualAim: 'Dharma', caste: 'Brahmin', guna: 'Sattva', mythologicalLink: 'Universal gods\' blessings' },
+                { name: 'Shravana', startDeg: 280, endDeg: 293.3333, lord: 'Moon', deity: 'Vishnu', symbol: 'Ear', keyTraits: 'Learning, listening, gossip', professions: 'Linguists, musicians', health: 'Ears', spiritualAim: 'Moksha', caste: 'Shudra', guna: 'Sattva-Rajas', mythologicalLink: 'Vishnu\'s cosmic steps' },
+                { name: 'Dhanishta', startDeg: 293.3333, endDeg: 306.6667, lord: 'Mars', deity: 'Vasus', symbol: 'Drum', keyTraits: 'Wealth, rhythm, arrogance', professions: 'Musicians, bankers', health: 'Knees', spiritualAim: 'Artha', caste: 'Kshatriya', guna: 'Rajas', mythologicalLink: 'Eight cosmic treasures' },
+                { name: 'Shatabhisha', startDeg: 306.6667, endDeg: 320, lord: 'Rahu', deity: 'Varuna', symbol: 'Empty Circle', keyTraits: 'Healing, eccentricity, isolation', professions: 'Doctors, inventors', health: 'Circulation', spiritualAim: 'Dharma', caste: 'Outcaste', guna: 'Tamas', mythologicalLink: 'Cosmic waters' },
+                { name: 'Purva Bhadrapada', startDeg: 320, endDeg: 333.3333, lord: 'Jupiter', deity: 'Ajaikapada', symbol: 'Sword', keyTraits: 'Mysticism, volatility, revolution', professions: 'Astrologers, activists', health: 'Feet', spiritualAim: 'Kama', caste: 'Brahmin', guna: 'Tamas-Rajas', mythologicalLink: 'Unborn cosmic being' },
+                { name: 'Uttara Bhadrapada', startDeg: 333.3333, endDeg: 346.6667, lord: 'Saturn', deity: 'Ahirbudhnya', symbol: 'Twins', keyTraits: 'Compassion, stagnation, psychic ability', professions: 'Nurses, therapists', health: 'Immune system', spiritualAim: 'Moksha', caste: 'Shudra', guna: 'Sattva-Tamas', mythologicalLink: 'Serpent of the deep' },
+                { name: 'Revati', startDeg: 346.6667, endDeg: 360, lord: 'Mercury', deity: 'Pushan', symbol: 'Fish', keyTraits: 'Nurturing, perfectionism, anxiety', professions: 'Teachers, caregivers', health: 'Feet', spiritualAim: 'Dharma', caste: 'Vaishya', guna: 'Sattva', mythologicalLink: 'Cosmic shepherd guiding souls' },
+            ];
+
+            // House classifications based on general Vedic astrology principles
+            const HOUSE_CLASSIFICATIONS = {
+                1: { name: 'Kendra', colorClass: 'kendra-house' },
+                2: { name: 'Artha', colorClass: 'artha-house' },
+                3: { name: 'Upachaya', colorClass: 'upachaya-house' },
+                4: { name: 'Kendra', colorClass: 'kendra-house' },
+                5: { name: 'Trikona', colorClass: 'trikona-house' },
+                6: { name: 'Dusthana', colorClass: 'dusthana-house' },
+                7: { name: 'Kendra', colorClass: 'kendra-house' },
+                8: { name: 'Dusthana', colorClass: 'dusthana-house' },
+                9: { name: 'Trikona', colorClass: 'trikona-house' },
+                10: { name: 'Kendra', colorClass: 'kendra-house' },
+                11: { name: 'Upachaya', colorClass: 'upachaya-house' },
+                12: { name: 'Dusthana', colorClass: 'dusthana-house' },
+            };
+
+            // Significances for each house, for the tooltip
+            const HOUSE_SIGNIFICATIONS = {
+                1: [
+                    "Physical appearance and bodily constitution", "Personality and character traits",
+                    "Health and vitality", "Self-identity and ego consciousness",
+                    "Early childhood and birth circumstances", "Head and brain functions",
+                    "General fortune and life direction", "Strength and weakness assessment",
+                    "Fame and reputation (Akhayam)", "Livelihood and basic survival"
+                ],
+                2: [
+                    "Wealth and material possessions", "Family lineage and heritage",
+                    "Speech and communication abilities", "Food and dietary habits",
+                    "Precious stones and metals", "Educational foundation",
+                    "Financial planning and savings capacity", "Self-worth and personal values"
+                ],
+                3: [
+                    "Siblings and coborn relationships", "Courage and physical bravery",
+                    "Communication and writing abilities", "Short journeys and travel",
+                    "Arms, shoulders, and hands", "Mental strength and determination",
+                    "Skills and manual dexterity", "Right ear and hearing capacity",
+                    "Personal efforts and hard work", "Adventure and enterprise"
+                ],
+                4: [
+                    "Mother and maternal relationships", "Home and domestic environment",
+                    "Property and real estate", "Vehicles and conveyances",
+                    "Education and learning", "Heart and chest region",
+                    "Happiness and contentment", "Water bodies and wells",
+                    "Childhood environment"
+                ],
+                5: [
+                    "Children and progeny", "Intelligence and wisdom",
+                    "Past-life merit (Purva Punya)", "Education and scholarship",
+                    "Creativity and artistic expression", "Romance and love affairs",
+                    "Speculation and gambling", "Stomach and digestive system",
+                    "Mantras and spiritual practices", "Authority and power"
+                ],
+                6: [
+                    "Enemies and opposition", "Diseases and health issues",
+                    "Debts and financial obligations", "Service and employment",
+                    "Litigation and legal disputes", "Maternal uncle and relatives",
+                    "Open enemies", "Chronic diseases", "Mental tensions and worries",
+                    "Small animals and pets", "Competition and rivalry"
+                ],
+                7: [
+                    "Marriage and spouse", "Business partnerships",
+                    "Sexual desire and passion", "Trade and commerce",
+                    "Public relationships", "Foreign connections",
+                    "Sexual energy and reproduction", "Reproductive organs",
+                    "Travel and journeys", "Death and longevity"
+                ],
+                8: [
+                    "Longevity and life span", "Sudden events and accidents",
+                    "Inheritance and legacies", "Occult knowledge and mysticism",
+                    "Transformation and rebirth", "Wounds and injuries",
+                    "Death and longevity", "Research and investigation",
+                    "Genitals and excretory organs", "Insurance and joint resources"
+                ],
+                9: [
+                    "  Father and paternal relationships", "Religion and spiritual beliefs",
+                    "Higher education and wisdom", "Fortune and divine grace",
+                    "Guru and spiritual teachers", "Dharma and righteousness",
+                    "Law and legal profession", "Long journeys and pilgrimages",
+                    "Publishing and broadcasting", "Self-confidence", "Grandchildren"
+                ],
+                10: [
+                    "Career and profession", "Public status and reputation",
+                    "Authority and leadership", "Government service",
+                    "Fame and honor", "Knee joints", "Business activities"
+                ],
+                11: [
+                    "Gains and income", "Elder siblings",
+                    "Friends and social networks", "Hopes and aspirations",
+                    "Recovery from illness", "Left ear", "Success in undertakings",
+                    "Father-in-law"
+                ],
+                12: [
+                    "Expenses and financial losses", "Foreign residence",
+                    "Spiritual liberation (Moksha)", "Sleep and subconscious mind",
+                    "Hospitalization", "Imprisonment and confinement",
+                    "Secret enemies", "Charitable activities", "Feet and locomotion",
+                    "Sexual pleasures", "Freedom from misery"
+                ]
+            };
+
+
+            // Unicode symbols for planets and Lagna
+            const PLANET_SYMBOLS = {
+                'Lagna': 'A', // Ascendant symbol (using 'A' for simplicity)
+                'Sun': '☉',
+                'Moon': '☽',
+                'Mars': '♂',
+                'Mercury': '☿',
+                'Jupiter': '♃',
+                'Venus': '♀',
+                'Saturn': '♄',
+                'Rahu': '☊', // North Node
+                'Ketu': '☋', // South Node
+            };
+
+            // Specific colors for each planet for visual distinction
+            const PLANET_COLORS = {
+                'Sun': '#FFD700',   // Gold
+                'Moon': '#A9A9A9',  // DarkGray
+                'Mars': '#FF4500',  // OrangeRed
+                'Mercury': '#228B22', // ForestGreen
+                'Jupiter': '#8A2BE2', // BlueViolet
+                'Venus': '#DA70D6', // Orchid
+                'Saturn': '#4682B4', // SteelBlue
+                'Rahu': '#4B0082',  // Indigo
+                'Ketu': '#8B4513',  // SaddleBrown
+                'Lagna': '#E2E8F0', // Light gray for Lagna symbol on dark theme
+                // Add colors for additional bodies if needed, otherwise they default to black
+                'Uranus': '#40E0D0', // Turquoise
+                'Neptune': '#1E90FF', // DodgerBlue
+                'Pluto': '#696969', // DimGray
+                'Maandi': '#800000', // Maroon
+                'Gulika': '#8B0000', // DarkRed
+                'Bhava Lagna': '#FFC0CB', // Pink
+                'Hora Lagna': '#FF6347', // Tomato
+                'Ghati Lagna': '#FFD700', // Gold
+                'Vighati Lagna': '#ADFF2F', // GreenYellow
+                'Bhrigu Bindu': '#4B0082', // Indigo
+                'Dhooma': '#6A5ACD', // SlateBlue
+                'Vyatipata': '#BA55D3', // MediumOrchid
+                'Parivesha': '#7FFF00', // Chartreuse
+                'Indra Chapa': '#F0E68C', // Khaki
+                'Upaketu': '#DDA0DD', // Plum
+                'Kaala': '#5F9EA0', // CadetBlue
+                'Mrityu': '#DEB887', // BurlyWood
+                'Artha Prahara': '#BDB76B', // DarkKhaki
+                'Yama Ghantaka': '#CD5C5C', // IndianRed
+                'Yoga Sphuta': '#8FBC8F', // DarkSeaGreen
+                'Avayoga Sphuta': '#B0C4DE' // LightSteelBlue
+            };
+
+            // Define the nature of planets for aspect highlighting (simplified for this chart)
+            // Note: Moon's benefic/malefic nature depends on its phase (waxing/waning)
+            // and Mercury's on its association. For simplification here, a fixed nature is used.
+            const PLANET_NATURE = {
+                'Jupiter': 'benefic',
+                'Venus': 'benefic',
+                'Moon': 'benefic', // Simplified: treat Moon generally as benefic for highlighting
+                'Mercury': 'benefic', // Simplified: treat Mercury generally as benefic for highlighting
+                'Sun': 'malefic', // In Vedic, Sun is often considered a malefic for material happiness
+                'Saturn': 'malefic',
+                'Mars': 'malefic',
+                'Rahu': 'malefic',
+                'Ketu': 'malefic',
+            };
+
+            // Significances for each planet, as provided by the user
+            const PLANET_SIGNIFICATIONS = {
+                "Sun": [
+                    "Soul & Self: Represents Atma (soul), self-identity",
+                    "Authority: Kings, leaders, government roles",
+                    "Father & Mentors: Paternal relationships",
+                    "Vitality: Physical strength, heart health",
+                    "Leadership: Courage, ambition",
+                    "Dharma: Righteousness, cosmic order",
+                    "Health: Heart, eyes, bones",
+                    "Professions: Politics, administration, medicine",
+                    "Gemstone: Ruby",
+                    "Remedies: Surya Namaskar, wheat donation"
+                ],
+                "Moon": [
+                    "Mind & Emotions: Mental stability, intuition",
+                    "Mother: Maternal relationships",
+                    "Fluids & Health: Digestion, menstrual cycle",
+                    "Travel: Short water journeys",
+                    "Public Image: Popularity, social connections",
+                    "Imagination: Creativity, dreams",
+                    "Agriculture: Crops, fertility",
+                    "Health Issues: Anxiety, insomnia",
+                    "Gemstone: Pearl",
+                    "Remedies: Monday fasting, milk donation"
+                ],
+                "Mars": [
+                    "Energy & Courage: Physical strength, bravery",
+                    "Siblings: Younger siblings",
+                    "Land & Property: Real estate, construction",
+                    "Ambition: Competitiveness, determination",
+                    "Accidents: Injuries, conflicts",
+                    "Professions: Military, engineering",
+                    "Health: Blood, muscles",
+                    "Weapons: Tools, machinery",
+                    "Gemstone: Red Coral",
+                    "Remedies: Red lentils donation"
+                ],
+                "Mercury": [
+                    "Intelligence: Logic, communication",
+                    "Education: Schools, writing",
+                    "Business: Trade, negotiation",
+                    "Humor: Wit, adaptability",
+                    "Nervous System: Brain, speech",
+                    "Friends: Networking, teamwork",
+                    "Skin: Allergies, complexion",
+                    "Professions: Writing, teaching",
+                    "Gemstone: Emerald",
+                    "Remedies: Green vegetables donation"
+                ],
+                "Jupiter": [
+                    "Wisdom: Spirituality, philosophy",
+                    "Teachers: Gurus, mentors",
+                    "Children: Progeny, upbringing",
+                    "Wealth: Inheritance, charity",
+                    "Law: Ethics, justice",
+                    "Health: Liver, obesity",
+                    "Growth: Optimism, expansion",
+                    "Professions: Judges, banking",
+                    "Gemstone: Yellow Sapphire",
+                    "Remedies: Turmeric donation"
+                ],
+                "Venus": [
+                    "Love: Romance, marriage",
+                    "Beauty: Aesthetics, attractiveness",
+                    "Arts: Music, poetry",
+                    "Luxury: Comfort, jewelry",
+                    "Health: Reproductive organs",
+                    "Diplomacy: Social grace",
+                    "Professions: Art, design",
+                    "Gemstone: Diamond",
+                    "Remedies: Sweet donation",
+                    "Spiritual Aim: Material pleasures"
+                ],
+                "Saturn": [
+                    "Karma: Discipline, hardships",
+                    "Longevity: Aging, chronic diseases",
+                    "Labor: Manual work",
+                    "Bones: Arthritis, dental issues",
+                    "Agriculture: Farming",
+                    "Justice: Delays, karma",
+                    "Professions: Labor, science",
+                    "Gemstone: Blue Sapphire",
+                    "Remedies: Black sesame donation",
+                    "Mythological Link: Time personified"
+                ],
+                "Rahu": [
+                    "Desires: Fame, obsessions",
+                    "Illusions: Deception, addictions",
+                    "Foreign Lands: Immigration",
+                    "Technology: Innovation",
+                    "Sudden Events: Gambling",
+                    "Health: Skin diseases",
+                    "Professions: Politics, tech",
+                    "Gemstone: Hessonite",
+                    "Remedies: Coconut donation",
+                    "Nature: Unconventional"
+                ],
+                "Ketu": [
+                    "Spirituality: Moksha, detachment",
+                    "Mysteries: Occult knowledge",
+                    "Isolation: Solitude",
+                    "Healing: Trauma recovery",
+                    "Accidents: Mysterious illnesses",
+                    "Professions: Research, healing",
+                    "Health: Nervous disorders",
+                    "Gemstone: Cat’s Eye",
+                    "Remedies: Black blanket donation",
+                    "Mythological Link: Headless body"
+                ]
+            };
+
+
+            /**
+             * Helper function to convert degrees to radians.
+             * @param {number} degrees - Angle in degrees.
+             * @returns {number} Angle in radians.
+             */
+            function toRadians(degrees) {
+                return degrees * (Math.PI / 180);
+            }
+
+            /**
+             * Converts polar coordinates to Cartesian coordinates for SVG drawing.
+             * This function assumes 0 degrees is at the top (North) and angles increase anti-clockwise.
+             * @param {number} centerX - X coordinate of the center of the circle.
+             * @param {number} centerY - Y coordinate of the center of the circle.
+             * @param {number} radius - Radius from the center.
+             * @param {number} angleInDegrees - Angle in degrees (0-360) where 0 is North.
+             * @returns {{x: number, y: number}} Cartesian coordinates.
+             */
+            function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+                // Astrological 0 (North/Top) corresponds to SVG angle 270 degrees (clockwise from East).
+                // Angles increase anti-clockwise in astrology, but clockwise in SVG.
+                // So, SVG_Angle = 270 - Astrological_Angle.
+                // This correctly places 0 degrees astrological at the top of the SVG (Y-axis pointing up).
+                const angleInRadians = toRadians(270 - angleInDegrees);
+
+                const x = centerX + (radius * Math.cos(angleInRadians));
+                const y = centerY + (radius * Math.sin(angleInRadians));
+                return { x: x, y: y };
+            }
+
+            /**
+             * Helper function to describe an SVG arc path segment for a filled annulus slice.
+             * @param {number} x - Center X coordinate.
+             * @param {number} y - Center Y coordinate.
+             * @param {number} outerRadius - Radius of the outer arc.
+             * @param {number} innerRadius - Radius of the inner arc.
+             * @param {number} startAngle - Start angle in astrological degrees (0 North, anti-clockwise positive).
+             * @param {number} endAngle - End angle in astrological degrees.
+             * @returns {string} The SVG path 'd' attribute string.
+             */
+            function describeArc(x, y, outerRadius, innerRadius, startAngle, endAngle) {
+                const outerStart = polarToCartesian(x, y, outerRadius, startAngle);
+                const outerEnd = polarToCartesian(x, y, outerRadius, endAngle);
+                const innerStart = polarToCartesian(x, y, innerRadius, startAngle);
+                const innerEnd = polarToCartesian(x, y, innerRadius, endAngle);
+
+                // largeArcFlag: 0 for angles <= 180, 1 for angles > 180. (For our 30-degree segments, it's always 0)
+                // sweepFlag: 0 for anti-clockwise sweep, 1 for clockwise sweep in SVG path.
+                // Since our polarToCartesian maps anti-clockwise astrological angles to anti-clockwise SVG path segments (270-angle decreases),
+                // the sweepFlag for the outer arc should be 0. The inner arc must go in the opposite direction, so sweepFlag 1.
+
+                const pathData = [
+                    `M ${outerStart.x} ${outerStart.y}`, // Move to the outer start point
+                    `A ${outerRadius} ${outerRadius} 0 0 0 ${outerEnd.x} ${outerEnd.y}`, // Outer arc (anti-clockwise)
+                    `L ${innerEnd.x} ${innerEnd.y}`, // Line to inner end point
+                    `A ${innerRadius} ${innerRadius} 0 0 1 ${innerStart.x} ${innerStart.y}`, // Inner arc (clockwise)
+                    `Z` // Close the path
+                ].join(' ');
+
+                return pathData;
+            }
+
+
+            /**
+             * Displays an error message in the designated error div.
+             * @param {string} message - The error message to display.
+             */
+            function displayError(message) {
+                errorMessagesDiv.textContent = message;
+                errorMessagesDiv.classList.remove('hidden');
+            }
+
+            /**
+             * Clears any currently displayed error messages.
+             */
+            function clearError() {
+                errorMessagesDiv.textContent = '';
+                errorMessagesDiv.classList.add('hidden');
+            }
+
+            /**
+             * Converts a Jagannath Hora longitude string (e.g., "11 Le 21' 54.56"") to decimal degrees (0-360).
+             * @param {string} longitudeStr - The longitude string from Jagannath Hora.
+             * @returns {number} The longitude in decimal degrees.
+             * @throws {Error} If the format is invalid or zodiac sign is unknown.
+             */
+            function convertLongitudeToDecimal(longitudeStr) {
+                const parts = longitudeStr.match(/(\d+)\s+([A-Za-z]{2})\s+(\d+)'\s+(\d+\.\d+)"/);
+                if (!parts) {
+                    throw new Error(`Invalid longitude format: "${longitudeStr}". Expected format like "11 Le 21' 54.56"".`);
+                }
+
+                let [, deg, signAbbr, min, sec] = parts;
+                deg = parseFloat(deg);
+                min = parseFloat(min);
+                sec = parseFloat(sec);
+
+                const signInfo = ZODIAC_SIGNS[signAbbr];
+                if (!signInfo) {
+                    throw new Error(`Unknown zodiac sign abbreviation: "${signAbbr}".`);
+                }
+
+                // Calculate total decimal degrees
+                const signOffset = signInfo.startDegree;
+                const decimalDegrees = signOffset + deg + (min / 60) + (sec / 3600);
+                return parseFloat(decimalDegrees.toFixed(4)); // Round to 4 decimal places for precision
+            }
+
+            /**
+             * Parses the entire Jagannath Hora input text into a structured array of planet objects.
+             * Validates each line format and converts longitude to decimal degrees.
+             * @param {string} inputText - The raw text input from the textarea.
+             * @returns {Array<Object>|null} An array of parsed planet objects, or null if parsing fails.
+             */
+            function parseJagannathHoraData(inputText) {
+                clearError(); // Clear previous errors
+                const lines = inputText.split('\n').map(line => line.trim()).filter(line => line !== '');
+                if (lines.length < 2) {
+                    displayError('No valid data found. Please paste the full Jagannath Hora data including the header.');
+                    return null;
+                }
+
+                // Skip header line (lines[0])
+                const dataLines = lines.slice(1);
+
+                const parsedData = [];
+                // A more robust regex to handle variable spacing and complex 'Body' names
+                // It ensures there's at least one space between parts.
+                const regex = /^\s*(.+?)\s+(\d+\s+[A-Za-z]{2}\s+\d+'\s+\d+\.\d+")\s+([A-Za-z]+)\s+(\d+)\s+([A-Za-z]{2})\s+([A-Za-z]{2})\s*$/;
+
+                for (const line of dataLines) {
+                    const match = line.match(regex);
+                    if (!match) {
+                        displayError(`Invalid line format: "${line}". Please ensure each line matches the example exactly, especially spacing and column order. Valid example: "Body            Longitude        Nakshatra Pada Rasi Navamsa".`);
+                        return null; // Stop parsing on first error
+                    }
+                    try {
+                        const body = match[1].trim();
+                        const longitudeStr = match[2];
+                        const nakshatra = match[3];
+                        const pada = parseInt(match[4], 10);
+                        const rasi = match[5];
+                        const navamsa = match[6];
+
+                        const decimalLongitude = convertLongitudeToDecimal(longitudeStr);
+
+                        parsedData.push({
+                            body: body, // e.g., "Lagna", "Sun - DK"
+                            longitudeStr: longitudeStr,
+                            decimalLongitude: decimalLongitude,
+                            nakshatra: nakshatra,
+                            pada: pada,
+                            rasi: rasi,
+                            navamsa: navamsa
+                        });
+                    } catch (e) {
+                        displayError(`Error parsing longitude or zodiac sign on line: "${line}". ${e.message}`);
+                        return null;
+                    }
+                }
+                return parsedData;
+            }
+
+            /**
+             * Retrieves Nakshatra details for a given longitude.
+             * @param {number} longitude - The decimal longitude to check.
+             * @returns {Object|null} The Nakshatra object if found, otherwise null.
+             */
+            function getNakshatraDetails(longitude) {
+                for (const nakshatra of NAKSHATRAS) {
+                    if (longitude >= nakshatra.startDeg && longitude < nakshatra.endDeg) {
+                        return nakshatra;
+                    }
+                }
+                return null; // Should ideally not happen for 0-360 degrees
+            }
+
+            /**
+             * Retrieves the Rasi (Zodiac Sign) lord for a given Rasi abbreviation.
+             * @param {string} rasiAbbr - The abbreviation of the Rasi (e.g., 'Ar', 'Le').
+             * @returns {string} The name of the Rasi lord, or 'Unknown' if not found.
+             */
+            function getRasiLord(rasiAbbr) {
+                const signInfo = ZODIAC_SIGNS[rasiAbbr];
+                return signInfo ? signInfo.lord : 'Unknown';
+            }
+
+            /**
+             * Converts a decimal degree longitude to its corresponding house number (1-12).
+             * Assumes a whole sign house system where the 1st house starts at firstHouseStartDegree.
+             * @param {number} decimalDegree - The longitude in decimal degrees (0-360).
+             * @param {number} firstHouseStartDegree - The starting degree of the 1st house.
+             * @returns {number} The house number (1-12).
+             */
+            function getHouseNumberFromDegree(decimalDegree, firstHouseStartDegree) {
+                // Calculate the degree relative to the start of the 1st house
+                let relativeDegree = (decimalDegree - firstHouseStartDegree + 360) % 360;
+                // Determine the house number (each house is 30 degrees)
+                const houseNumber = Math.floor(relativeDegree / 30) + 1;
+                return houseNumber;
+            }
+
+            /**
+             * Main function to create and render the polar horoscope chart in SVG.
+             * @param {Array<Object>} parsedPlanets - An array of parsed planet data.
+             */
+            function createSVGChart(parsedPlanets) {
+                // Store data globally for aspect calculation
+                parsedPlanetsGlobal = parsedPlanets;
+                const ascendant = parsedPlanets.find(p => p.body.includes('Lagna'));
+                if (!ascendant) {
+                    displayError('Lagna (Ascendant) data not found in the input. Cannot generate chart.');
+                    return;
+                }
+                const ascendantRasiInfo = ZODIAC_SIGNS[ascendant.rasi];
+                if (!ascendantRasiInfo) {
+                    displayError(`Could not find Rasi information for Ascendant's Rasi: ${ascendant.rasi}`);
+                    return;
+                }
+                firstHouseStartDegreeGlobal = ascendantRasiInfo.startDegree;
+
+
+                // Clear existing elements from both fixed and rotatable groups
+                chartFixedElementsGroup.innerHTML = '';
+                chartRotatableElementsGroup.innerHTML = '';
+
+                // Adjust SVG size to fit container dynamically
+                const containerRect = chartSvgContainer.getBoundingClientRect();
+                const svgSize = Math.min(containerRect.width, containerRect.height, 1000); // Max size 1000px
+                polarChartSvg.setAttribute('width', svgSize);
+                polarChartSvg.setAttribute('height', svgSize);
+
+                // Draw the main outer circle of the chart (Fixed, not rotated with the inner chart)
+                const mainCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                mainCircle.setAttribute('cx', CENTER_X);
+                mainCircle.setAttribute('cy', CENTER_Y);
+                mainCircle.setAttribute('r', CHART_RADIUS);
+                mainCircle.setAttribute('fill', 'none');
+                mainCircle.setAttribute('stroke', '#a0aec0'); // Light gray border for dark theme
+                mainCircle.setAttribute('stroke-width', '2');
+                chartFixedElementsGroup.appendChild(mainCircle); // Append to fixed group
+
+
+                // Draw 360-degree markings around the outer circle (Fixed, not rotated)
+                for (let i = 0; i < 360; i += 5) {
+                    const radius = CHART_RADIUS;
+                    // Vary mark length for 5°, 10°, and 30° intervals
+                    const markLength = (i % 30 === 0) ? 15 : (i % 10 === 0 ? 10 : 5);
+                    const innerRadius = radius - markLength;
+
+                    const start = polarToCartesian(CENTER_X, CENTER_Y, innerRadius, i);
+                    const end = polarToCartesian(CENTER_X, CENTER_Y, radius, i);
+
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', start.x);
+                    line.setAttribute('y1', start.y);
+                    line.setAttribute('x2', end.x);
+                    line.setAttribute('y2', end.y);
+                    line.setAttribute('stroke', '#718096'); // Medium gray for markings
+                    line.setAttribute('stroke-width', '1');
+                    chartFixedElementsGroup.appendChild(line);
+
+                    // Add degree labels for every 30 degrees (Fixed, not rotated)
+                    if (i % 30 === 0) {
+                        const textPos = polarToCartesian(CENTER_X, CENTER_Y, radius + 20, i); // Position slightly outside
+                        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        text.setAttribute('x', textPos.x);
+                        text.setAttribute('y', textPos.y);
+                        text.setAttribute('text-anchor', 'middle');
+                        text.setAttribute('alignment-baseline', 'middle');
+                        text.setAttribute('font-size', '16');
+                        text.setAttribute('fill', '#e2e8f0'); // Light text for degrees
+                        text.textContent = i + '°';
+                        chartFixedElementsGroup.appendChild(text);
+                    }
+                }
+
+                // Draw concentric rings that delineate different information layers (Rotated with inner chart)
+                const rings = [
+                    { radius: ZODIAC_RING_INNER_RADIUS },   // Zodiac Signs ring
+                    { radius: PLANET_RING_INNER_RADIUS },   // Planetary positions ring
+                    { radius: HOUSE_RING_INNER_RADIUS },    // House numbers ring
+                    { radius: NAKSHATRA_NAME_RING_INNER_RADIUS }, // Nakshatra names ring
+                    { radius: NAKSHATRA_LORD_RING_INNER_RADIUS }, // Nakshatra lords ring
+                    { radius: CENTER_RING_RADIUS },         // Center info circle
+                ];
+
+                rings.forEach((ring) => {
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', CENTER_X);
+                    circle.setAttribute('cy', CENTER_Y);
+                    circle.setAttribute('r', ring.radius);
+                    circle.setAttribute('fill', 'none');
+                    circle.setAttribute('stroke', '#4a5568'); // Darker stroke for inner rings
+                    circle.setAttribute('stroke-width', '1');
+                    chartRotatableElementsGroup.appendChild(circle); // Append to rotating group
+                });
+
+                // Set the rotation transform for the inner chart elements
+                // The rotation amount is the 'firstHouseStartDegree' to bring it to 0 (North)
+                chartRotatableElementsGroup.setAttribute('transform', `rotate(${firstHouseStartDegreeGlobal}, ${CENTER_X}, ${CENTER_Y})`);
+
+
+                // Call functions to draw specific chart components (all appended to the rotatable group)
+                drawHouseSegments(firstHouseStartDegreeGlobal); // Houses now start at Rasi beginning
+                drawZodiacSigns(firstHouseStartDegreeGlobal); // Pass rotation for counter-rotation
+                drawNakshatraSegments(firstHouseStartDegreeGlobal); // Pass rotation for counter-rotation
+                plotPlanets(parsedPlanets, firstHouseStartDegreeGlobal); // Pass rotation for counter-rotation
+                addLabelsAndText(parsedPlanets, firstHouseStartDegreeGlobal); // Pass rotation for counter-rotation
+
+                // Populate info panels (these calls are now empty functions as the panels are removed)
+                populateInfoPanels(parsedPlanets, firstHouseStartDegreeGlobal);
+            }
+
+
+            /**
+             * Draws the 12 house divisions and house numbers on the chart.
+             * Houses are 30 degrees each, starting from the calculated firstHouseStartDegree.
+             * Also adds invisible hoverable paths for tooltips.
+             * @param {number} rotationDegree - The degree used for the main group rotation, for counter-rotation of text.
+             */
+            function drawHouseSegments(rotationDegree) {
+                const houseGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                houseGroup.setAttribute('id', 'house-segments');
+                chartRotatableElementsGroup.appendChild(houseGroup); // Append to rotating group
+
+                const houseDetails = []; // To populate the House Information panel
+
+                for (let i = 0; i < 12; i++) {
+                    const houseNumber = i + 1; // House numbers are 1-12
+
+                    // Determine the house name based on the house number
+                    let houseName = '';
+                    switch (houseNumber) {
+                        case 1: houseName = 'Lagna'; break;
+                        case 2: houseName = 'Dhana'; break;
+                        case 3: houseName = 'Sahaja'; break;
+                        case 4: houseName = 'Sukha'; break;
+                        case 5: houseName = 'Putra'; break;
+                        case 6: houseName = 'Shatru'; break;
+                        case 7: houseName = 'Yuvati'; break;
+                        case 8: houseName = 'Randhra'; break;
+                        case 9: houseName = 'Dharma'; break;
+                        case 10: houseName = 'Karma'; break;
+                        case 11: houseName = 'Labha'; break;
+                        case 12: houseName = 'Vyaya'; break;
+                    }
+
+
+                    // Calculate the start angle (cusp) for the current house based on the actual zodiacal degrees.
+                    // The 1st house starts at 'rotationDegree' (which is now 0 North visually)
+                    let cuspDegree = (rotationDegree + (i * 30)) % 360;
+                    if (cuspDegree < 0) cuspDegree += 360; // Normalize to 0-360
+
+                    // Calculate the end angle (cusp) for the current house (start of next)
+                    let nextCuspDegree = (rotationDegree + ((i + 1) * 30)) % 360;
+                    if (nextCuspDegree < 0) nextCuspDegree += 360;
+
+                    // Draw the radial line for the house cusp
+                    const startPoint = polarToCartesian(CENTER_X, CENTER_Y, CHART_RADIUS, cuspDegree);
+                    const endPoint = polarToCartesian(CENTER_X, CENTER_Y, HOUSE_RING_INNER_RADIUS, cuspDegree); // Line extends to house ring
+
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', startPoint.x);
+                    line.setAttribute('y1', startPoint.y);
+                    line.setAttribute('x2', endPoint.x);
+                    line.setAttribute('y2', endPoint.y);
+                    line.setAttribute('class', 'house-line');
+                    houseGroup.appendChild(line);
+
+                    // Create the actual path for the house segment that will be highlighted and has hover events
+                    const housePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    const housePathData = describeArc(
+                        CENTER_X, CENTER_Y,
+                        CHART_RADIUS, HOUSE_RING_INNER_RADIUS, // Covers the entire house segment area
+                        cuspDegree, nextCuspDegree
+                    );
+                    housePath.setAttribute('d', housePathData);
+                    housePath.setAttribute('fill', 'transparent'); // Invisible fill by default
+                    housePath.setAttribute('stroke', 'transparent'); // No stroke by default
+                    housePath.setAttribute('stroke-width', '1');
+                    housePath.setAttribute('id', `house-segment-${houseNumber}`); // Unique ID for targeting
+                    housePath.classList.add('house-segment-path'); // Class for styling and selection
+                    housePath.style.cursor = 'pointer'; // Indicate it's interactive
+
+                    // Prepare detailed info for the tooltip on hover
+                    const significations = HOUSE_SIGNIFICATIONS[houseNumber] || [];
+                    const detailedInfo = `
+                        <strong>House ${houseNumber} (${houseName})</strong><br>
+                        Significations:<br>
+                        ${significations.map(s => `- ${s}`).join('<br>')}
+                    `;
+                    housePath.setAttribute('data-info', detailedInfo);
+
+                    // Attach event listeners for highlighting and tooltips
+                    housePath.addEventListener('mouseover', (e) => {
+                        showHouseAspects(e, houseNumber, 'house', parsedPlanetsGlobal, firstHouseStartDegreeGlobal);
+                        showHouseTooltip(e, detailedInfo); // Show tooltip for the hovered house
+                    });
+                    housePath.addEventListener('mouseout', hideHouseHouseAndAspects);
+                    houseGroup.appendChild(housePath);
+
+
+                    // Place the House Number Label
+                    const midAngle = (cuspDegree + 15) % 360; // Angle for the center of the house segment
+                    const houseLabelRadius = (HOUSE_RING_INNER_RADIUS + PLANET_RING_INNER_RADIUS) / 2; // Position between rings
+
+                    const labelPos = polarToCartesian(CENTER_X, CENTER_Y, houseLabelRadius, midAngle);
+
+                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    text.setAttribute('x', labelPos.x);
+                    text.setAttribute('y', labelPos.y);
+                    text.setAttribute('text-anchor', 'middle');
+                    text.setAttribute('alignment-baseline', 'middle');
+                    text.setAttribute('font-size', '20');
+                    text.setAttribute('fill', '#e2e8f0'); // Light text for numbers
+                    text.textContent = houseNumber;
+                    // Apply counter-rotation to keep text upright relative to the screen
+                    text.setAttribute('transform', `rotate(${-rotationDegree}, ${labelPos.x}, ${labelPos.y})`);
+                    // Add event listeners to the text too, so hovering either highlights
+                    text.addEventListener('mouseover', (e) => {
+                        showHouseAspects(e, houseNumber, 'house', parsedPlanetsGlobal, firstHouseStartDegreeGlobal);
+                        showHouseTooltip(e, detailedInfo); // Show tooltip for the hovered house
+                    });
+                    text.addEventListener('mouseout', hideHouseHouseAndAspects);
+                    houseGroup.appendChild(text);
+
+                    // Collect house details for the info panel (panel is removed, but data structure kept for consistency if needed later)
+                    const classification = HOUSE_CLASSIFICATIONS[houseNumber];
+                    houseDetails.push({
+                        house: houseNumber,
+                        startCusp: cuspDegree.toFixed(2) + '°',
+                        endCusp: nextCuspDegree.toFixed(2) + '°',
+                        classification: classification ? classification.name : 'N/A',
+                        colorClass: classification ? classification.colorClass : 'neutral-house'
+                    });
+                }
+                // updateHouseInfoPanel(houseDetails); // Removed call
+            }
+
+            /**
+             * Draws the 12 Zodiac signs as filled segments and their names/symbols.
+             * @param {number} rotationDegree - The degree used for the main group rotation, for counter-rotation of text.
+             */
+            function drawZodiacSigns(rotationDegree) {
+                const zodiacGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                zodiacGroup.setAttribute('id', 'zodiac-signs');
+                chartRotatableElementsGroup.appendChild(zodiacGroup); // Append to rotating group
+
+                Object.values(ZODIAC_SIGNS).forEach(sign => {
+                    const startAngle = sign.startDegree;
+                    const endAngle = sign.startDegree + 30; // Each sign is 30 degrees
+
+                    // 1. Draw the filled Rasi segment (this will be the highlight target)
+                    const rasiPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    const rasiPathData = describeArc(
+                        CENTER_X, CENTER_Y,
+                        ZODIAC_RING_INNER_RADIUS, PLANET_RING_INNER_RADIUS, // Fill between these radii
+                        startAngle, endAngle
+                    );
+                    rasiPath.setAttribute('d', rasiPathData);
+                    rasiPath.setAttribute('fill', sign.colorClass); // Use the color value directly for fill
+                    rasiPath.setAttribute('fill-opacity', '0.2'); // Semi-transparent fill for better readability
+                    rasiPath.setAttribute('stroke', '#4a5568'); // Border for the segment, darker for dark theme
+                    rasiPath.setAttribute('stroke-width', '1');
+                    rasiPath.setAttribute('id', `rasi-segment-${sign.name}`); // Unique ID for targeting
+                    rasiPath.classList.add('rasi-segment-path'); // Class for styling and selection
+                    rasiPath.style.cursor = 'pointer';
+
+                    // Prepare detailed info for the tooltip on hover (same as symbolText for consistency)
+                    const detailedSignInfo = `
+                        <strong>Rasi: ${sign.name} (${sign.symbol})</strong><br>
+                        Type: ${sign.type}<br>
+                        Gender: ${sign.gender}<br>
+                        Element: ${sign.element}<br>
+                        Temperament: ${sign.temperament}<br>
+                        Guna: ${sign.guna}<br>
+                        Body Part: ${sign.bodyPart}<br>
+                        Rising Part: ${sign.risingPart}<br>
+                        Significations:<br>
+                        ${sign.significations.map(s => `- ${s}`).join('<br>')}
+                    `;
+
+                    // Attach event listeners for highlighting and tooltips
+                    rasiPath.addEventListener('mouseover', (e) => {
+                        const hoveredHouseNumber = getHouseNumberFromDegree(sign.startDegree, firstHouseStartDegreeGlobal);
+                        showHouseAspects(e, hoveredHouseNumber, 'sign', parsedPlanetsGlobal, firstHouseStartDegreeGlobal);
+                        showSignTooltip(e, detailedSignInfo); // Show tooltip for the hovered sign
+                    });
+                    rasiPath.addEventListener('mouseout', hideHouseHouseAndAspects);
+                    zodiacGroup.appendChild(rasiPath);
+
+                    // 2. Place Zodiac Symbol (on top of the filled segment)
+                    const symbolRadius = (CHART_RADIUS + ZODIAC_RING_INNER_RADIUS) / 2;
+                    const symbolPos = polarToCartesian(CENTER_X, CENTER_Y, symbolRadius, startAngle + 15); // Midpoint of segment
+
+                    const symbolText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    symbolText.setAttribute('x', symbolPos.x);
+                    symbolText.setAttribute('y', symbolPos.y);
+                    symbolText.setAttribute('text-anchor', 'middle');
+                    symbolText.setAttribute('alignment-baseline', 'middle');
+                    symbolText.setAttribute('font-size', '28'); // Larger for symbols
+                    symbolText.setAttribute('fill', '#e2e8f0'); // Light text for symbols
+                    symbolText.textContent = sign.symbol;
+                    // Apply counter-rotation
+                    symbolText.setAttribute('transform', `rotate(${-rotationDegree}, ${symbolPos.x}, ${symbolPos.y})`);
+                    
+                    // Add cursor style to indicate interactivity
+                    symbolText.style.cursor = 'pointer';
+
+                    symbolText.setAttribute('data-info', detailedSignInfo); // Store info on element
+                    symbolText.addEventListener('mouseover', (e) => {
+                        const hoveredHouseNumber = getHouseNumberFromDegree(sign.startDegree, firstHouseStartDegreeGlobal);
+                        showHouseAspects(e, hoveredHouseNumber, 'sign', parsedPlanetsGlobal, firstHouseStartDegreeGlobal);
+                        showSignTooltip(e, detailedSignInfo); // Show tooltip for the hovered sign
+                    });
+                    symbolText.addEventListener('mouseout', hideHouseHouseAndAspects);
+                    zodiacGroup.appendChild(symbolText);
+
+                    // 3. Place Zodiac Name (on top of the filled segment)
+                    const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    nameText.setAttribute('x', symbolPos.x);
+                    nameText.setAttribute('y', symbolPos.y + 25); // Offset below symbol
+                    nameText.setAttribute('text-anchor', 'middle');
+                    nameText.setAttribute('alignment-baseline', 'middle');
+                    nameText.setAttribute('font-size', '14');
+                    nameText.setAttribute('fill', '#e2e8f0'); // Light text for names
+                    nameText.textContent = sign.name;
+                    // Apply counter-rotation
+                    nameText.setAttribute('transform', `rotate(${-rotationDegree}, ${symbolPos.x}, ${symbolPos.y + 25})`);
+                     // Add event listeners to the text too, so hovering either highlights
+                    nameText.addEventListener('mouseover', (e) => {
+                        const hoveredHouseNumber = getHouseNumberFromDegree(sign.startDegree, firstHouseStartDegreeGlobal);
+                        showHouseAspects(e, hoveredHouseNumber, 'sign', parsedPlanetsGlobal, firstHouseStartDegreeGlobal);
+                        showSignTooltip(e, detailedSignInfo); // Show tooltip for the hovered sign
+                    });
+                    nameText.addEventListener('mouseout', hideHouseHouseAndAspects);
+                    zodiacGroup.appendChild(nameText);
+                });
+            }
+
+            /**
+             * Draws the 27 Nakshatra segments and their names.
+             * Nakshatras are fixed 13°20' segments.
+             * @param {number} rotationDegree - The degree used for the main group rotation, for counter-rotation of text.
+             */
+            function drawNakshatraSegments(rotationDegree) {
+                const nakshatraGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                nakshatraGroup.setAttribute('id', 'nakshatra-segments');
+                chartRotatableElementsGroup.appendChild(nakshatraGroup); // Append to rotating group
+
+                NAKSHATRAS.forEach(nakshatra => {
+                    const startAngle = nakshatra.startDeg;
+                    const endAngle = nakshatra.endDeg;
+                    const midAngle = (startAngle + endAngle) / 2;
+
+                    // Draw dashed separator lines for Nakshatra boundaries
+                    const startPointOuter = polarToCartesian(CENTER_X, CENTER_Y, NAKSHATRA_NAME_RING_INNER_RADIUS, startAngle);
+                    const endPointInner = polarToCartesian(CENTER_X, CENTER_Y, CENTER_RING_RADIUS, startAngle); // Extend to center ring
+
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', startPointOuter.x);
+                    line.setAttribute('y1', startPointOuter.y);
+                    line.setAttribute('x2', endPointInner.x);
+                    line.setAttribute('y2', endPointInner.y);
+                    line.setAttribute('stroke', '#4a5568'); /* Darker stroke for dark theme */
+                    line.setAttribute('stroke-width', '0.5'); // Thinner lines for subtlety
+                    line.setAttribute('stroke-dasharray', '2 2'); // Dashed line
+                    nakshatraGroup.appendChild(line);
+
+                    // Place Nakshatra Name
+                    const nameLabelRadius = (NAKSHATRA_NAME_RING_INNER_RADIUS + NAKSHATRA_LORD_RING_INNER_RADIUS) / 2;
+                    const nameLabelPos = polarToCartesian(CENTER_X, CENTER_Y, nameLabelRadius, midAngle);
+
+                    const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    nameText.setAttribute('x', nameLabelPos.x);
+                    nameText.setAttribute('y', nameLabelPos.y);
+                    nameText.setAttribute('text-anchor', 'middle');
+                    nameText.setAttribute('alignment-baseline', 'middle');
+                    nameText.setAttribute('font-size', '10'); // Small font for Nakshatra names
+                    nameText.setAttribute('fill', '#e2e8f0'); // Light text
+                    nameText.textContent = nakshatra.name;
+                    // Apply counter-rotation
+                    nameText.setAttribute('transform', `rotate(${-rotationDegree}, ${nameLabelPos.x}, ${nameLabelPos.y})`);
+                    nakshatraGroup.appendChild(nameText);
+
+                    // Create an invisible rectangle for hover area for the nakshatra name
+                    const hoverRectSize = 30; // Approximate size for hoverable area
+                    const hoverRectX = nameLabelPos.x - (hoverRectSize / 2);
+                    const hoverRectY = nameLabelPos.y - (hoverRectSize / 2);
+
+                    const hoverRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    hoverRect.setAttribute('x', hoverRectX);
+                    hoverRect.setAttribute('y', hoverRectY);
+                    hoverRect.setAttribute('width', hoverRectSize);
+                    hoverRect.setAttribute('height', hoverRectSize);
+                    hoverRect.setAttribute('fill', 'transparent');
+                    hoverRect.setAttribute('stroke', 'transparent');
+                    hoverRect.style.cursor = 'pointer';
+                    // Apply counter-rotation to the hover rect as well
+                    hoverRect.setAttribute('transform', `rotate(${-rotationDegree}, ${nameLabelPos.x}, ${nameLabelPos.y})`);
+
+
+                    // Prepare detailed info for the tooltip
+                    const detailedInfo = `
+                        <strong>Nakshatra: ${nakshatra.name}</strong><br>
+                        Deity: ${nakshatra.deity}<br>
+                        Symbol: ${nakshatra.symbol}<br>
+                        Key Traits: ${nakshatra.keyTraits}<br>
+                        Professions: ${nakshatra.professions}<br>
+                        Health: ${nakshatra.health}<br>
+                        Spiritual Aim: ${nakshatra.spiritualAim}<br>
+                        Caste: ${nakshatra.caste}<br>
+                        Guna: ${nakshatra.guna}<br>
+                        Mythological Link: ${nakshatra.mythologicalLink}
+                    `;
+                    hoverRect.setAttribute('data-info', detailedInfo);
+                    hoverRect.addEventListener('mousemove', (e) => showNakshatraTooltip(e, detailedInfo));
+                    hoverRect.addEventListener('mouseleave', hideNakshatraTooltip);
+                    nakshatraGroup.appendChild(hoverRect);
+
+
+                    // Place Nakshatra Lord in the new ring
+                    const lordLabelRadius = (NAKSHATRA_LORD_RING_INNER_RADIUS + CENTER_RING_RADIUS) / 2;
+                    const lordLabelPos = polarToCartesian(CENTER_X, CENTER_Y, lordLabelRadius, midAngle);
+
+                    const lordText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    lordText.setAttribute('x', lordLabelPos.x);
+                    lordText.setAttribute('y', lordLabelPos.y);
+                    lordText.setAttribute('text-anchor', 'middle');
+                    lordText.setAttribute('alignment-baseline', 'middle');
+                    lordText.setAttribute('font-size', '9'); // Slightly smaller for lord
+                    
+                    // Set color based on the Nakshatra's lord (planet)
+                    const lordColor = PLANET_COLORS[nakshatra.lord] || '#e2e8f0'; // Default light text
+                    lordText.setAttribute('fill', lordColor);
+                    
+                    lordText.textContent = nakshatra.lord; // Only planet name
+                    // Apply counter-rotation
+                    lordText.setAttribute('transform', `rotate(${-rotationDegree}, ${lordLabelPos.x}, ${lordLabelPos.y})`);
+                    nakshatraGroup.appendChild(lordText);
+                });
+                // updateNakshatraInfoPanel(); // Removed call
+            }
+
+            /**
+             * Plots the planets on the chart at their precise longitudes.
+             * Includes planet symbols, degree labels, and hover functionality.
+             * @param {Array<Object>} planets - An array of parsed planet data.
+             * @param {number} rotationDegree - The degree used for the main group rotation, for counter-rotation of text.
+             */
+            function plotPlanets(planets, rotationDegree) {
+                const planetGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                planetGroup.setAttribute('id', 'planets');
+                chartRotatableElementsGroup.appendChild(planetGroup); // Append to rotating group
+
+                // displayedPlanets array and updatePlanetaryInfoPanel calls removed as the panel is no longer needed.
+
+                planets.forEach(planet => {
+                    const { body, decimalLongitude, rasi, nakshatra, pada, navamsa, longitudeStr } = planet;
+                    // For planets like "Jupiter (R) - PiK", extract "Jupiter"
+                    const mainPlanetName = body.split(' - ')[0].replace(' (R)', '').trim(); // Fixed: Freplace to replace
+                    const symbol = PLANET_SYMBOLS[mainPlanetName] || mainPlanetName[0]; // Get symbol, fallback to first letter
+                    const planetColor = PLANET_COLORS[mainPlanetName] || '#e2e8f0'; // Get color, fallback to light gray for dark theme
+
+                    // Position for planet symbol
+                    const symbolRadius = (ZODIAC_RING_INNER_RADIUS + PLANET_RING_INNER_RADIUS) / 2; // Position between zodiac and planet ring
+                    const symbolPos = polarToCartesian(CENTER_X, CENTER_Y, symbolRadius, decimalLongitude);
+
+                    const planetSymbolElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    planetSymbolElement.setAttribute('x', symbolPos.x);
+                    planetSymbolElement.setAttribute('y', symbolPos.y);
+                    planetSymbolElement.setAttribute('text-anchor', 'middle');
+                    planetSymbolElement.setAttribute('alignment-baseline', 'middle');
+                    planetSymbolElement.setAttribute('font-size', '20'); // Larger for symbols
+                    planetSymbolElement.setAttribute('fill', planetColor);
+                    planetSymbolElement.textContent = symbol;
+                    planetSymbolElement.classList.add('planet-symbol');
+                    // Add a slight transformation to adjust symbol positioning if needed (e.g. for Moon)
+                    if (mainPlanetName === 'Moon') {
+                        planetSymbolElement.setAttribute('transform', `translate(0, -3) rotate(${-rotationDegree}, ${symbolPos.x}, ${symbolPos.y})`); // Adjust Moon symbol slightly & counter-rotate
+                    } else {
+                        // Apply counter-rotation for other planets
+                        planetSymbolElement.setAttribute('transform', `rotate(${-rotationDegree}, ${symbolPos.x}, ${symbolPos.y})`);
+                    }
+                    planetGroup.appendChild(planetSymbolElement);
+
+                    // Prepare detailed info for the tooltip on hover
+                    let detailedInfo = `
+                        <strong>${body}</strong><br>
+                        Longitude: ${longitudeStr} (${decimalLongitude.toFixed(2)}°)<br>
+                        Nakshatra: ${nakshatra} (Pada: ${pada})<br>
+                        Rasi: ${rasi} (Lord: ${getRasiLord(rasi)})<br>
+                        Navamsa: ${navamsa}
+                    `;
+
+                    // Add significations if available for the planet
+                    if (PLANET_SIGNIFICATIONS[mainPlanetName]) {
+                        detailedInfo += `<br><strong>Significations:</strong><br>`;
+                        PLANET_SIGNIFICATIONS[mainPlanetName].forEach(signification => {
+                            detailedInfo += `- ${signification}<br>`;
+                        });
+                    }
+
+                    planetSymbolElement.setAttribute('data-info', detailedInfo); // Store info on element
+
+                    // Add event listeners for hover (mousemove for showing, mouseleave for hiding)
+                    planetSymbolElement.addEventListener('mousemove', (e) => showPlanetTooltip(e, detailedInfo));
+                    planetSymbolElement.addEventListener('mouseleave', hidePlanetTooltip);
+
+                    // Add degree label next to the planet symbol, offset slightly
+                    const labelOffsetRadius = symbolRadius + 20; // Slightly further out from the center
+                    const labelPos = polarToCartesian(CENTER_X, CENTER_Y, labelOffsetRadius, decimalLongitude);
+
+                    const degreeText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    degreeText.setAttribute('x', labelPos.x);
+                    degreeText.setAttribute('y', labelPos.y);
+                    degreeText.setAttribute('text-anchor', 'middle');
+                    degreeText.setAttribute('alignment-baseline', 'middle');
+                    degreeText.setAttribute('font-size', '10'); // Smaller font for degrees
+                    degreeText.setAttribute('fill', planetColor);
+                    degreeText.textContent = `${decimalLongitude.toFixed(2)}°`;
+                    degreeText.classList.add('planet-text');
+                    // Apply counter-rotation
+                    degreeText.setAttribute('transform', `rotate(${-rotationDegree}, ${labelPos.x}, ${labelPos.y})`);
+                    planetGroup.appendChild(degreeText);
+                });
+                // updatePlanetaryInfoPanel(displayedPlanets); // Removed call
+            }
+
+            /**
+             * Adds central labels and other static text information to the chart.
+             * Primarily focuses on Lagna's Rasi, Rasi Lord, and Nakshatra Pada.
+             * @param {Array<Object>} parsedPlanets - An array of parsed planet data.
+             * @param {number} rotationDegree - The degree used for the main group rotation, for counter-rotation of text.
+             */
+            /*function addLabelsAndText(parsedPlanets, rotationDegree) {
+                const lagnaData = parsedPlanets.find(p => p.body.includes('Lagna'));
+                if (lagnaData) {
+                    const lagnaRasiLord = getRasiLord(lagnaData.rasi);
+                    const lagnaNakshatraPada = `${lagnaData.nakshatra} Pada ${lagnaData.pada}`;
+
+                    const centerTextGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                    centerTextGroup.setAttribute('id', 'center-info');
+                    chartRotatableElementsGroup.appendChild(centerTextGroup); // Append to rotating group
+
+                    // Display Lagna Rasi
+                    const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    line1.setAttribute('x', CENTER_X);
+                    line1.setAttribute('y', CENTER_Y - 20); // Position above center
+                    line1.setAttribute('text-anchor', 'middle');
+                    line1.setAttribute('alignment-baseline', 'middle');
+                    line1.setAttribute('font-size', '18');
+                    line1.setAttribute('fill', '#e2e8f0'); // Light text
+                    line1.textContent = `Lagna: ${lagnaData.rasi}`;
+                    // Apply counter-rotation
+                    line1.setAttribute('transform', `rotate(${-rotationDegree}, ${CENTER_X}, ${CENTER_Y - 20})`);
+                    centerTextGroup.appendChild(line1);
+
+                    // Display Rasi Lord of Lagna
+                    const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    line2.setAttribute('x', CENTER_X);
+                    line2.setAttribute('y', CENTER_Y); // Center vertically
+                    line2.setAttribute('text-anchor', 'middle');
+                    line2.setAttribute('alignment-baseline', 'middle');
+                    line2.setAttribute('font-size', '14');
+                    line2.setAttribute('fill', '#a0aec0'); // Medium light text
+                    line2.textContent = `Lord: ${lagnaRasiLord}`;
+                    // Apply counter-rotation
+                    line2.setAttribute('transform', `rotate(${-rotationDegree}, ${CENTER_X}, ${CENTER_Y})`);
+                    centerTextGroup.appendChild(line2);
+
+                    // Display Nakshatra Pada of Lagna
+                    const line3 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    line3.setAttribute('x', CENTER_X);
+                    line3.setAttribute('y', CENTER_Y + 20); // Position below center
+                    line3.setAttribute('text-anchor', 'middle');
+                    line3.setAttribute('alignment-baseline', 'middle');
+                    line3.setAttribute('font-size', '14');
+                    line3.setAttribute('fill', '#a0aec0'); // Medium light text
+                    line3.textContent = lagnaNakshatraPada;
+                    // Apply counter-rotation
+                    line3.setAttribute('transform', `rotate(${-rotationDegree}, ${CENTER_X}, ${CENTER_Y + 20})`);
+                    centerTextGroup.appendChild(line3);
+                }
+            }
+
+            /**
+             * Calculates the house number that is 'offset' houses away from 'currentHouse'.
+             * Uses 1-indexed house numbers (1 to 12).
+             * @param {number} currentHouse - The starting house number (1-12).
+             * @param {number} offset - The number of houses away (e.g., 3 for 3rd aspect).
+             * @returns {number} The house number that is 'offset' houses away.
+             */
+            function getAspectedHouseNumber(currentHouse, offset) {
+                // Formula: ((currentHouse + offset - 2) % 12) + 1
+                // -2 because: currentHouse is 1-indexed, offset counts itself as 1.
+                // e.g., 7th aspect from House 1: (1 + 7 - 2) = 6. (6 % 12) + 1 = 7. Correct.
+                // e.g., 3rd aspect from House 10: (10 + 3 - 2) = 11. (11 % 12) + 1 = 12. Correct.
+                return ((currentHouse + offset - 2) % 12) + 1;
+            }
+
+            /**
+             * Highlights the hovered house and houses aspected by planets whose aspects fall on the hovered house.
+             * Applies color based on benefic/malefic nature of aspecting planets.
+             * @param {MouseEvent} event - The mouse event.
+             * @param {number} hoveredHouseNumber - The house number that is currently hovered.
+             * @param {string} type - 'house' or 'sign' (determines the primary element to highlight).
+             * @param {Array<Object>} planetsData - Global parsed planet data.
+             * @param {number} firstHouseDegree - Global first house start degree.
+             */
+            function showHouseAspects(event, hoveredHouseNumber, type, planetsData, firstHouseDegree) {
+                clearHighlights(); // Clear previous highlights first
+
+                // Hide all other tooltips
+                hidePlanetTooltip();
+                hideSignTooltip();
+                hideHouseTooltip();
+                hideNakshatraTooltip();
+
+                const housesToHighlight = new Set();
+                const aspectingBenefics = new Set();
+                const aspectingMalefics = new Set();
+
+                // Always highlight the hovered house itself
+                housesToHighlight.add(hoveredHouseNumber);
+
+                // Collect aspects and their natures
+                planetsData.forEach(planet => {
+                    const mainPlanetName = planet.body.split(' - ')[0].replace(' (R)', '').trim();
+                    if (mainPlanetName === 'Lagna') return; // Lagna does not aspect
+
+                    const planetNatalHouse = getHouseNumberFromDegree(planet.decimalLongitude, firstHouseDegree);
+                    
+                    let aspectOffsets = [];
+                    if (mainPlanetName === 'Saturn') {
+                        aspectOffsets = [3, 7, 10];
+                    } else if (mainPlanetName === 'Mars') {
+                        aspectOffsets = [4, 7, 8];
+                    } else if (mainPlanetName === 'Jupiter') {
+                        aspectOffsets = [5, 7, 9];
+                    } else if (mainPlanetName === 'Rahu' || mainPlanetName === 'Ketu') {
+                        aspectOffsets = [5, 9];
+                    } else if (['Sun', 'Moon', 'Mercury', 'Venus'].includes(mainPlanetName)) {
+                        aspectOffsets = [7];
+                    } else {
+                        return; // No defined aspects for this planet
+                    }
+
+                    aspectOffsets.forEach(offset => {
+                        const aspectedHouseByPlanet = getAspectedHouseNumber(planetNatalHouse, offset);
+                        if (aspectedHouseByPlanet === hoveredHouseNumber) {
+                            housesToHighlight.add(planetNatalHouse); // Add the planet's natal house to highlight
+
+                            const planetNature = PLANET_NATURE[mainPlanetName];
+                            if (planetNature === 'benefic') {
+                                aspectingBenefics.add(mainPlanetName);
+                            } else if (planetNature === 'malefic') {
+                                aspectingMalefics.add(mainPlanetName);
+                            }
+                        }
+                    });
+                });
+
+                // Determine highlight color based on aspects received by the hovered house
+                let highlightClass = 'highlighted-self'; // Default for the hovered house itself
+                if (aspectingBenefics.size > 0 && aspectingMalefics.size > 0) {
+                    highlightClass = 'highlighted-mixed';
+                } else if (aspectingBenefics.size > 0) {
+                    highlightClass = 'highlighted-benefic';
+                } else if (aspectingMalefics.size > 0) {
+                    highlightClass = 'highlighted-malefic';
+                }
+                
+                // Apply highlight to the hovered house
+                const hoveredElementId = (type === 'house') ? `house-segment-${hoveredHouseNumber}` : `rasi-segment-${Object.values(ZODIAC_SIGNS)[hoveredHouseNumber - 1].name}`;
+                const hoveredElement = document.getElementById(hoveredElementId);
+                if (hoveredElement) {
+                    // Remove existing highlight classes before adding the new one
+                    hoveredElement.classList.remove('highlighted-self', 'highlighted-benefic', 'highlighted-malefic', 'highlighted-mixed');
+                    hoveredElement.classList.add(highlightClass);
+                }
+
+                // Apply highlight to all determined houses (natal houses of aspecting planets)
+                housesToHighlight.forEach(houseNum => {
+                    const houseElement = document.getElementById(`house-segment-${houseNum}`);
+                    if (houseElement && houseNum !== hoveredHouseNumber) { // Don't re-apply to the hovered house
+                        // Determine the nature of planets in this *natal* house that aspect the *hovered* house
+                        const relevantPlanetsInNatalHouse = planetsData.filter(p => 
+                            getHouseNumberFromDegree(p.decimalLongitude, firstHouseDegree) === houseNum && 
+                            Object.keys(PLANET_NATURE).includes(p.body.split(' - ')[0].replace(' (R)', '').trim())
+                        );
+
+                        let natalHouseHighlightClass = 'highlighted-self'; // Default if no specific aspect is from here
+                        let hasBeneficAspectFromHere = false;
+                        let hasMaleficAspectFromHere = false;
+
+                        relevantPlanetsInNatalHouse.forEach(p => {
+                            const mainPlanetName = p.body.split(' - ')[0].replace(' (R)', '').trim();
+                            const planetNatalHouseCheck = getHouseNumberFromDegree(p.decimalLongitude, firstHouseDegree);
+                            
+                            let aspectOffsets = [];
+                            if (mainPlanetName === 'Saturn') {
+                                aspectOffsets = [3, 7, 10];
+                            } else if (mainPlanetName === 'Mars') {
+                                aspectOffsets = [4, 7, 8];
+                            } else if (mainPlanetName === 'Jupiter') {
+                                aspectOffsets = [5, 7, 9];
+                            } else if (mainPlanetName === 'Rahu' || mainPlanetName === 'Ketu') {
+                                aspectOffsets = [5, 9];
+                            } else if (['Sun', 'Moon', 'Mercury', 'Venus'].includes(mainPlanetName)) {
+                                aspectOffsets = [7];
+                            }
+                            
+                            aspectOffsets.forEach(offset => {
+                                if (getAspectedHouseNumber(planetNatalHouseCheck, offset) === hoveredHouseNumber) {
+                                    const nature = PLANET_NATURE[mainPlanetName];
+                                    if (nature === 'benefic') hasBeneficAspectFromHere = true;
+                                    if (nature === 'malefic') hasMaleficAspectFromHere = true;
+                                }
+                            });
+                        });
+
+                        if (hasBeneficAspectFromHere && hasMaleficAspectFromHere) {
+                            natalHouseHighlightClass = 'highlighted-mixed';
+                        } else if (hasBeneficAspectFromHere) {
+                            natalHouseHighlightClass = 'highlighted-benefic';
+                        } else if (hasMaleficAspectFromHere) {
+                            natalHouseHighlightClass = 'highlighted-malefic';
+                        }
+                        
+                        houseElement.classList.add(natalHouseHighlightClass);
+                    }
+                });
+
+                // Update tooltip to show aspecting planets
+                const originalInfo = event.target.getAttribute('data-info');
+                let aspectDetails = '';
+                if (aspectingBenefics.size > 0 || aspectingMalefics.size > 0) {
+                    aspectDetails += '<br><br><strong>Aspected by:</strong><br>';
+                    aspectingBenefics.forEach(p => aspectDetails += `- ${p} (Benefic)<br>`);
+                    aspectingMalefics.forEach(p => aspectDetails += `- ${p} (Malefic)<br>`);
+                }
+                const updatedInfo = originalInfo + aspectDetails;
+
+                if (type === 'house') {
+                    showHouseTooltip(event, updatedInfo);
+                } else if (type === 'sign') {
+                    showSignTooltip(event, updatedInfo);
+                }
+            }
+
+
+            /**
+             * Clears all house and sign highlights and hides all tooltips.
+             */
+            function hideHouseHouseAndAspects() {
+                clearHighlights(); // Clear all highlighting from houses and signs
+                hideHouseTooltip();
+                hideSignTooltip();
+                hidePlanetTooltip();
+                hideNakshatraTooltip();
+            }
+
+            /**
+             * Removes the 'highlighted' classes from all house and rasi segment paths.
+             */
+            function clearHighlights() {
+                document.querySelectorAll('.house-segment-path').forEach(el => {
+                    el.classList.remove('highlighted-self', 'highlighted-benefic', 'highlighted-malefic', 'highlighted-mixed');
+                    el.setAttribute('fill', 'transparent'); // Reset fill to transparent
+                    el.setAttribute('stroke', 'transparent'); // Reset stroke to transparent
+                });
+                document.querySelectorAll('.rasi-segment-path').forEach(el => {
+                    el.classList.remove('highlighted-self', 'highlighted-benefic', 'highlighted-malefic', 'highlighted-mixed');
+                    // Reset fill and stroke for rasi segments back to their original non-highlighted state
+                    const signName = el.id.replace('rasi-segment-', '');
+                    const signInfo = Object.values(ZODIAC_SIGNS).find(s => s.name === signName);
+                    if (signInfo) {
+                        el.setAttribute('fill', signInfo.colorClass);
+                        el.setAttribute('fill-opacity', '0.2');
+                        el.setAttribute('stroke', '#4a5568');
+                    }
+                });
+            }
+
+            /**
+             * Displays the planet details tooltip on mouseover.
+             * @param {MouseEvent} event - The mouse event object.
+             * @param {string} info - The detailed information string to display.
+             */
+            function showPlanetTooltip(event, info) {
+                // Hide other tooltips and any existing highlights
+                hideSignTooltip();
+                hideHouseTooltip();
+                hideNakshatraTooltip();
+                clearHighlights(); // Clear highlights when a planet tooltip is shown
+
+                planetTooltip.innerHTML = info.trim(); // Use innerHTML for line breaks
+                planetTooltip.classList.add('active');
+
+                // Get the bounding rectangle of the chart container
+                const chartContainerRect = chartContainer.getBoundingClientRect();
+                const tooltipWidth = planetTooltip.offsetWidth;
+                const tooltipHeight = planetTooltip.offsetHeight;
+
+                // Calculate position relative to the chart container
+                let left = event.clientX - chartContainerRect.left + 15; // Offset from chart container's left
+                let top = event.clientY - chartContainerRect.top + 15;  // Offset from chart container's top
+
+                // Adjust if tooltip goes off right edge of the chart container
+                if (left + tooltipWidth > chartContainerRect.width - 5) {
+                    left = event.clientX - chartContainerRect.left - tooltipWidth - 15;
+                }
+                // Adjust if tooltip goes off bottom edge of the chart container
+                if (top + tooltipHeight > chartContainerRect.height - 5) {
+                    top = event.clientY - chartContainerRect.top - tooltipHeight - 15;
+                }
+                // Ensure it's not off the left edge of the chart container
+                if (left < 5) {
+                    left = 5; 
+                }
+                // Ensure it's not off the top edge of the chart container
+                if (top < 5) {
+                    top = 5; 
+                }
+
+                planetTooltip.style.left = `${left}px`;
+                planetTooltip.style.top = `${top}px`;
+            }
+
+            /**
+             * Hides the planet details tooltip on mouseleave.
+             */
+            function hidePlanetTooltip() {
+                planetTooltip.classList.remove('active');
+            }
+
+            /**
+             * Displays the sign details tooltip on mouseover.
+             * @param {MouseEvent} event - The mouse event object.
+             * @param {string} info - The detailed information string to display.
+             */
+            function showSignTooltip(event, info) {
+                // Hide other tooltips and any existing highlights
+                hidePlanetTooltip();
+                hideHouseTooltip();
+                hideNakshatraTooltip();
+                // Highlights are managed by showHouseAspects, so we don't clear them here
+                // if the sign hover is triggering it. This ensures continuous highlighting.
+
+                signTooltip.innerHTML = info.trim(); // Use innerHTML for line breaks
+                signTooltip.classList.add('active');
+
+                // Get the bounding rectangle of the chart container
+                const chartContainerRect = chartContainer.getBoundingClientRect();
+                const tooltipWidth = signTooltip.offsetWidth;
+                const tooltipHeight = signTooltip.offsetHeight;
+
+                // Calculate position relative to the chart container
+                let left = event.clientX - chartContainerRect.left + 15;
+                let top = event.clientY - chartContainerRect.top + 15;
+
+                // Adjust if tooltip goes off right edge of the chart container
+                if (left + tooltipWidth > chartContainerRect.width - 5) {
+                    left = event.clientX - chartContainerRect.left - tooltipWidth - 15;
+                }
+                // Adjust if tooltip goes off bottom edge of the chart container
+                if (top + tooltipHeight > chartContainerRect.height - 5) {
+                    top = event.clientY - chartContainerRect.top - tooltipHeight - 15;
+                }
+                // Ensure it's not off the left edge of the chart container
+                if (left < 5) {
+                    left = 5; 
+                }
+                // Ensure it's not off the top edge of the chart container
+                if (top < 5) {
+                    top = 5; 
+                }
+
+                signTooltip.style.left = `${left}px`;
+                signTooltip.style.top = `${top}px`;
+            }
+
+            /**
+             * Hides the sign details tooltip on mouseleave.
+             */
+            function hideSignTooltip() {
+                signTooltip.classList.remove('active');
+            }
+
+            /**
+             * Displays the house details tooltip on mouseover.
+             * @param {MouseEvent} event - The mouse event object.
+             * @param {string} info - The detailed information string to display.
+             */
+            function showHouseTooltip(event, info) {
+                // Hide other tooltips and any existing highlights
+                hidePlanetTooltip();
+                hideSignTooltip();
+                hideNakshatraTooltip();
+                // Highlights are managed by showHouseAspects, so we don't clear them here
+
+                houseTooltip.innerHTML = info.trim(); // Use innerHTML for line breaks
+                houseTooltip.classList.add('active');
+
+                // Get the bounding rectangle of the chart container
+                const chartContainerRect = chartContainer.getBoundingClientRect();
+                const tooltipWidth = houseTooltip.offsetWidth;
+                const tooltipHeight = houseTooltip.offsetWidth; // Should be offsetHeight, was width earlier
+
+                // Calculate position relative to the chart container
+                let left = event.clientX - chartContainerRect.left + 15;
+                let top = event.clientY - chartContainerRect.top + 15;
+
+                // Adjust if tooltip goes off right edge of the chart container
+                if (left + tooltipWidth > chartContainerRect.width - 5) {
+                    left = event.clientX - chartContainerRect.left - tooltipWidth - 15;
+                }
+                // Adjust if tooltip goes off bottom edge of the chart container
+                if (top + tooltipHeight > chartContainerRect.height - 5) {
+                    top = event.clientY - chartContainerRect.top - tooltipHeight - 15;
+                }
+                // Ensure it's not off the left edge of the chart container
+                if (left < 5) {
+                    left = 5; 
+                }
+                // Ensure it's not off the top edge of the chart container
+                if (top < 5) {
+                    top = 5; 
+                }
+
+                houseTooltip.style.left = `${left}px`;
+                houseTooltip.style.top = `${top}px`;
+            }
+
+            /**
+             * Hides the house details tooltip on mouseleave.
+             */
+            function hideHouseTooltip() {
+                houseTooltip.classList.remove('active');
+            }
+
+            /**
+             * Displays the nakshatra details tooltip on mouseover.
+             * @param {MouseEvent} event - The mouse event object.
+             * @param {string} info - The detailed information string to display.
+             */
+            function showNakshatraTooltip(event, info) {
+                // Hide other tooltips and any existing highlights
+                hidePlanetTooltip();
+                hideSignTooltip();
+                hideHouseTooltip();
+                clearHighlights(); // Clear highlights when a nakshatra tooltip is shown
+
+                nakshatraTooltip.innerHTML = info.trim();
+                nakshatraTooltip.classList.add('active');
+
+                const chartContainerRect = chartContainer.getBoundingClientRect();
+                const tooltipWidth = nakshatraTooltip.offsetWidth;
+                const tooltipHeight = nakshatraTooltip.offsetHeight;
+
+                let left = event.clientX - chartContainerRect.left + 15;
+                let top = event.clientY - chartContainerRect.top + 15;
+
+                // Adjust if tooltip goes off right edge of the chart container
+                if (left + tooltipWidth > chartContainerRect.width - 5) {
+                    left = event.clientX - chartContainerRect.left - tooltipWidth - 15;
+                }
+                // Adjust if tooltip goes off bottom edge of the chart container
+                if (top + tooltipHeight > chartContainerRect.height - 5) {
+                    top = event.clientY - chartContainerRect.top - tooltipHeight - 15;
+                }
+                // Ensure it's not off the left edge of the chart container
+                if (left < 5) {
+                    left = 5; 
+                }
+                // Ensure it's not off the top edge of the chart container
+                if (top < 5) {
+                    top = 5; 
+                }
+
+                nakshatraTooltip.style.left = `${left}px`;
+                nakshatraTooltip.style.top = `${top}px`;
+            }
+
+            /**
+             * Hides the nakshatra details tooltip on mouseleave.
+             */
+            function hideNakshatraTooltip() {
+                nakshatraTooltip.classList.remove('active');
+            }
+
+
+            /**
+             * Populates all information panels (Planetary, House, Nakshatra).
+             * These functions are now empty as per user request to remove panels.
+             */
+            function populateInfoPanels(parsedPlanets, ascendantRasiStartDegree) {
+                // updatePlanetaryInfoPanel([]); // Removed calls
+                // updateHouseInfoPanel([]); // Removed calls
+                // updateNakshatraInfoPanel(); // Removed calls
+            }
+
+            // These functions are no longer needed since the panels are removed.
+            // Keeping them as empty stubs in case they are called elsewhere and to avoid errors.
+            function updatePlanetaryInfoPanel(planets) {}
+            function updateHouseInfoPanel(houseData) {}
+            function updateNakshatraInfoPanel() {}
+
+
+            // Event listener for the "Generate Chart" button
+            generateChartBtn.addEventListener('click', () => {
+                const inputText = jagannathHoraDataTextarea.value;
+                const parsedData = parseJagannathHoraData(inputText);
+
+                if (parsedData) {
+                    console.log('Parsed Data:', parsedData); // Log parsed data for debugging
+                    createSVGChart(parsedData); // Generate the chart
+                }
+            });
+
+            // Initial population of info panels when the page loads (these calls are now empty)
+            updatePlanetaryInfoPanel([]);
+            updateHouseInfoPanel([]);
+            updateNakshatraInfoPanel();
+        });
+    </script>
+</body>
+</html>
