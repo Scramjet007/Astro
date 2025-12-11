@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bhrigu Nandi Nadi - Dark Astrology Theme</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Added Cinzel for a mystical/astrological heading font -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        astro: {
+                            dark: '#0B0F19',
+                            card: '#151B2B',
+                            input: '#1E2538',
+                            gold: '#FFD700',
+                            goldDim: '#C5A000',
+                            text: '#E2E8F0',
+                            muted: '#94A3B8'
+                        }
+                    },
+                    fontFamily: {
+                        mystical: ['Cinzel', 'serif'],
+                        body: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0B0F19;
+            background-image: 
+                radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 3px),
+                radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 2px),
+                radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 3px);
+            background-size: 550px 550px, 350px 350px, 250px 250px;
+            background-position: 0 0, 40px 60px, 130px 270px;
+            color: #E2E8F0;
+        }
+        
+        h1, h2, h3, h4 {
+            font-family: 'Cinzel', serif;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B0F19; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569; 
+        }
+
+        .horoscope-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: auto auto auto;
+            gap: 1rem;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .direction-box {
+            border: 2px solid;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .direction-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(255, 215, 0, 0.1);
+        }
+
+        /* East (Fire) - Deep Red/Maroon */
+        #eastBox {
+            grid-column: 2 / span 1;
+            grid-row: 1;
+            border-color: #7f1d1d;
+            background: linear-gradient(145deg, #450a0a, #280505);
+        }
+        #eastBox h3 { color: #fca5a5; text-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
+        #eastBox .element-text { color: #fecaca; }
+        #eastBox .rasi-symbols { color: #ef4444; }
+
+        /* West (Air) - Deep Indigo/Midnight */
+        #westBox {
+            grid-column: 1 / span 1; /* Note: Original CSS said "West on left", which is col 1, but grid logic was col 2 in original? Fixing to standard left */
+            grid-column: 1 / span 1;
+            grid-row: 2;
+            border-color: #312e81;
+            background: linear-gradient(145deg, #1e1b4b, #11102e);
+        }
+        #westBox h3 { color: #a5b4fc; text-shadow: 0 0 10px rgba(99, 102, 241, 0.3); }
+        #westBox .element-text { color: #e0e7ff; }
+        #westBox .rasi-symbols { color: #818cf8; }
+
+        /* South (Earth) - Deep Forest Green */
+        #southBox {
+            grid-column: 3 / span 1;
+            grid-row: 2;
+            border-color: #14532d;
+            background: linear-gradient(145deg, #052e16, #021c0d);
+        }
+        #southBox h3 { color: #86efac; text-shadow: 0 0 10px rgba(34, 197, 94, 0.3); }
+        #southBox .element-text { color: #dcfce7; }
+        #southBox .rasi-symbols { color: #4ade80; }
+
+        /* North (Water) - Deep Ocean Blue */
+        #northBox {
+            grid-column: 2 / span 1;
+            grid-row: 3;
+            border-color: #0c4a6e;
+            background: linear-gradient(145deg, #082f49, #051d2e);
+        }
+        #northBox h3 { color: #7dd3fc; text-shadow: 0 0 10px rgba(14, 165, 233, 0.3); }
+        #northBox .element-text { color: #e0f2fe; }
+        #northBox .rasi-symbols { color: #38bdf8; }
+
+        /* Center Image */
+        .center-image-container {
+            grid-column: 2 / span 1;
+            grid-row: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
+            background: radial-gradient(circle, rgba(255,215,0,0.1) 0%, rgba(0,0,0,0) 70%);
+        }
+        .center-image-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+            border: 2px solid #334155;
+        }
+
+        /* Animation */
+        @keyframes glow {
+            0% { text-shadow: 0 0 5px rgba(255, 215, 0, 0.5); }
+            50% { text-shadow: 0 0 15px rgba(255, 215, 0, 0.8), 0 0 5px rgba(255, 215, 0, 0.5); }
+            100% { text-shadow: 0 0 5px rgba(255, 215, 0, 0.5); }
+        }
+        h1 {
+            animation: glow 3s infinite ease-in-out;
+            color: #FFD700;
+        }
+
+        .planet-item {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0.4rem 0;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+        }
+        .planet-item:last-child {
+            border-bottom: none;
+        }
+        
+        /* Form Elements */
+        .input-group label {
+            color: #94A3B8;
+        }
+        select, input[type="number"], textarea {
+            border: 1px solid #334155;
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 1rem;
+            background-color: #1E2538;
+            color: #E2E8F0;
+            transition: border-color 0.2s;
+        }
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: #FFD700;
+            box-shadow: 0 0 0 1px #FFD700;
+        }
+        
+        /* Buttons */
+        .btn-primary {
+            background: linear-gradient(to right, #b45309, #d97706);
+            color: #fff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-family: 'Cinzel', serif;
+            letter-spacing: 1px;
+            transition: all 0.2s ease-in-out;
+            border: 1px solid #f59e0b;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(to right, #92400e, #b45309);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+        }
+        .btn-secondary {
+            background-color: #1e293b;
+            color: #94a3b8;
+            border: 1px solid #475569;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-secondary:hover {
+            background-color: #334155;
+            color: #e2e8f0;
+            border-color: #64748b;
+        }
+
+        .message-box {
+            background-color: rgba(66, 153, 225, 0.1);
+            color: #63b3ed;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            border: 1px solid #2b6cb0;
+            display: none;
+        }
+
+        /* Karaka Analysis Boxes */
+        .karaka-result-box {
+            border: 1px solid;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+        .karaka-result-box h4 {
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+        }
+        
+        /* Present - Greenish/Earth */
+        .karaka-result-box.present { 
+            background: linear-gradient(180deg, #022c22, #064e3b); 
+            border-color: #059669; 
+            color: #6ee7b7; 
+        }
+        /* Supporting - Blue/Water */
+        .karaka-result-box.supporting { 
+            background: linear-gradient(180deg, #0c4a6e, #075985); 
+            border-color: #0ea5e9; 
+            color: #7dd3fc; 
+        }
+        /* Future - Gold/Fire */
+        .karaka-result-box.future { 
+            background: linear-gradient(180deg, #451a03, #78350f); 
+            border-color: #d97706; 
+            color: #fcd34d; 
+        }
+        /* Past - Red/Ember */
+        .karaka-result-box.past { 
+            background: linear-gradient(180deg, #450a0a, #7f1d1d); 
+            border-color: #ef4444; 
+            color: #fca5a5; 
+        }
+
+        @media (max-width: 768px) {
+            .horoscope-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto;
+            }
+            #eastBox, #westBox, #southBox, #northBox, .center-image-container {
+                grid-column: auto;
+                grid-row: auto;
+            }
+            .center-image-container {
+                order: -1; /* Show image on top on mobile or hide if preferred */
+                margin-bottom: 1rem;
+            }
+        }
+    </style>
+</head>
+<body class="p-6 min-h-screen">
+    <div class="max-w-4xl mx-auto bg-astro-card p-8 rounded-xl shadow-2xl border border-gray-800">
+        <h1 class="text-3xl md:text-4xl text-center mb-2 tracking-wide">Bhrigu Nandi Nadi</h1>
+        <p class="text-center text-gray-500 mb-8 font-light italic text-sm">Explore the celestial path of destiny</p>
+
+        <!-- Input Section -->
+        <div class="mb-8 p-6 bg-gray-900/50 rounded-lg border border-gray-800 backdrop-blur-sm">
+            <h2 class="text-2xl font-semibold mb-4 text-astro-gold">Paste Planet Data</h2>
+            <textarea id="pasteDataInput" class="w-full h-32 p-3 font-mono text-sm resize-y focus:ring-1 focus:ring-yellow-500" placeholder="Paste data format: 'Sun - BK 17 Ta 49' 53.71' Rohi 3 Ta Ge'"></textarea>
+            <button id="parseDataBtn" class="w-full mt-4 btn-secondary border-dashed">Parse & Populate Data</button>
+            <div id="messageBox" class="message-box"></div>
+        </div>
+
+        <div class="mb-8 p-6 bg-gray-900/50 rounded-lg border border-gray-800 backdrop-blur-sm">
+            <h2 class="text-2xl font-semibold mb-4 text-astro-gold">Planetary Alignment</h2>
+            <div id="planetInputs" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <!-- Inputs generated by JS -->
+            </div>
+            <button id="generateHoroscopeBtn" class="w-full btn-primary text-lg shadow-lg">Reveal Horoscope</button>
+        </div>
+
+        <!-- Directional Chart -->
+        <div class="p-6 bg-gray-900/50 rounded-lg border border-gray-800 backdrop-blur-sm relative">
+            <h2 class="text-2xl font-semibold text-center mb-8 text-astro-gold">Directional Chakra</h2>
+            
+            <div class="horoscope-grid">
+                <!-- East (Top/Center) -->
+                <div id="eastBox" class="direction-box">
+                    <h3 class="text-xl font-bold mb-1">East</h3>
+                    <p class="element-text text-sm mb-2 opacity-80">Agni (Fire)</p>
+                    <div class="rasi-symbols text-2xl my-1 flex gap-3">
+                        <span title="Aries">♈</span>
+                        <span title="Leo">♌</span>
+                        <span title="Sagittarius">♐</span>
+                    </div>
+                    <div id="eastPlanets" class="w-full mt-3 text-sm"></div>
+                </div>
+
+                <!-- West (Left) -->
+                <div id="westBox" class="direction-box">
+                    <h3 class="text-xl font-bold mb-1">West</h3>
+                    <p class="element-text text-sm mb-2 opacity-80">Vayu (Air)</p>
+                    <div class="rasi-symbols text-2xl my-1 flex gap-3">
+                        <span title="Gemini">♊</span>
+                        <span title="Libra">♎</span>
+                        <span title="Aquarius">♒</span>
+                    </div>
+                    <div id="westPlanets" class="w-full mt-3 text-sm"></div>
+                </div>
+
+                <!-- Center Image Placeholder -->
+                <div class="center-image-container">
+                    <!-- Placeholder for center chart, customized for dark mode -->
+                    <div class="w-24 h-24 rounded-full border-2 border-astro-gold flex items-center justify-center bg-black/50">
+                        <span class="text-4xl">🕉️</span>
+                    </div>
+                </div>
+
+                <!-- South (Right) -->
+                <div id="southBox" class="direction-box">
+                    <h3 class="text-xl font-bold mb-1">South</h3>
+                    <p class="element-text text-sm mb-2 opacity-80">Prithvi (Earth)</p>
+                    <div class="rasi-symbols text-2xl my-1 flex gap-3">
+                        <span title="Taurus">♉</span>
+                        <span title="Virgo">♍</span>
+                        <span title="Capricorn">♑</span>
+                    </div>
+                    <div id="southPlanets" class="w-full mt-3 text-sm"></div>
+                </div>
+
+                <!-- North (Bottom/Center) -->
+                <div id="northBox" class="direction-box">
+                    <h3 class="text-xl font-bold mb-1">North</h3>
+                    <p class="element-text text-sm mb-2 opacity-80">Jal (Water)</p>
+                    <div class="rasi-symbols text-2xl my-1 flex gap-3">
+                        <span title="Cancer">♋</span>
+                        <span title="Scorpio">♏</span>
+                        <span title="Pisces">♓</span>
+                    </div>
+                    <div id="northPlanets" class="w-full mt-3 text-sm"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Karaka Analysis -->
+        <div class="mb-8 p-6 bg-gray-900/50 rounded-lg border border-gray-800 backdrop-blur-sm mt-8">
+            <h2 class="text-2xl font-semibold mb-4 text-astro-gold">Jiva & Karaka Analysis</h2>
+            <div class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4 mb-4">
+                <label for="karakaPlanetSelect" class="text-lg font-medium text-gray-400 md:w-1/3">Select Significator (Karaka):</label>
+                <select id="karakaPlanetSelect" class="flex-grow">
+                    <option value="">-- Select Planet --</option>
+                    <!-- Populated by JS -->
+                </select>
+            </div>
+            <button id="analyzeKarakaBtn" class="w-full mt-4 btn-primary shadow-lg">Analyze Destiny</button>
+
+            <div id="karakaAnalysisResults" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
+                <div id="presentBox" class="karaka-result-box present">
+                    <h4 class="text-xl mb-2">Present / Self</h4>
+                    <div class="planets-list w-full text-sm"></div>
+                </div>
+                <div id="supportingBox" class="karaka-result-box supporting">
+                    <h4 class="text-xl mb-2">Support / Opposite</h4>
+                    <div class="planets-list w-full text-sm"></div>
+                </div>
+                <div id="futureBox" class="karaka-result-box future">
+                    <h4 class="text-xl mb-2">Future / Next</h4>
+                    <div class="planets-list w-full text-sm"></div>
+                </div>
+                <div id="pastBox" class="karaka-result-box past">
+                    <h4 class="text-xl mb-2">Past / Behind</h4>
+                    <div class="planets-list w-full text-sm"></div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="text-center mt-12 text-gray-600 text-xs border-t border-gray-800 pt-6">
+            <p>Crafted in reverence for the Rishis.</p>
+        </footer>
+    </div>
+
+    <script>
+        // --- DATA & CONFIGURATION ---
+        const planets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu'];
+
+        const rasiData = {
+            'Aries': { symbol: '♈', element: 'Agni', direction: 'East', abbr: 'Ar' },
+            'Taurus': { symbol: '♉', element: 'Prithvi', direction: 'South', abbr: 'Ta' },
+            'Gemini': { symbol: '♊', element: 'Vayu', direction: 'West', abbr: 'Ge' },
+            'Cancer': { symbol: '♋', element: 'Jal', direction: 'North', abbr: 'Cn' },
+            'Leo': { symbol: '♌', element: 'Agni', direction: 'East', abbr: 'Le' },
+            'Virgo': { symbol: '♍', element: 'Prithvi', direction: 'South', abbr: 'Vi' },
+            'Libra': { symbol: '♎', element: 'Vayu', direction: 'West', abbr: 'Li' },
+            'Scorpio': { symbol: '♏', element: 'Jal', direction: 'North', abbr: 'Sc' },
+            'Sagittarius': { symbol: '♐', element: 'Agni', direction: 'East', abbr: 'Sg' },
+            'Capricorn': { symbol: '♑', element: 'Prithvi', direction: 'South', abbr: 'Cp' },
+            'Aquarius': { symbol: '♒', element: 'Vayu', direction: 'West', abbr: 'Aq' },
+            'Pisces': { symbol: '♓', element: 'Jal', direction: 'North', abbr: 'Pi' }
+        };
+
+        const rasiAbbrToFull = {};
+        for (const rasi in rasiData) {
+            rasiAbbrToFull[rasiData[rasi].abbr] = rasi;
+        }
+
+        let parsedPlanetsData = [];
+
+        const directionRelationships = {
+            'East': { opposite: 'West', clockwise90: 'South' },
+            'South': { opposite: 'North', clockwise90: 'West' },
+            'West': { opposite: 'East', clockwise90: 'North' },
+            'North': { opposite: 'South', clockwise90: 'East' }
+        };
+
+        // --- DOM ELEMENTS ---
+        const planetInputsDiv = document.getElementById('planetInputs');
+        const generateHoroscopeBtn = document.getElementById('generateHoroscopeBtn');
+        const pasteDataInput = document.getElementById('pasteDataInput');
+        const parseDataBtn = document.getElementById('parseDataBtn');
+        const messageBox = document.getElementById('messageBox');
+        const karakaPlanetSelect = document.getElementById('karakaPlanetSelect');
+        const analyzeKarakaBtn = document.getElementById('analyzeKarakaBtn');
+
+        const eastPlanetsDiv = document.getElementById('eastPlanets');
+        const southPlanetsDiv = document.getElementById('southPlanets');
+        const westPlanetsDiv = document.getElementById('westPlanets');
+        const northPlanetsDiv = document.getElementById('northPlanets');
+
+        const presentBox = document.getElementById('presentBox').querySelector('.planets-list');
+        const supportingBox = document.getElementById('supportingBox').querySelector('.planets-list');
+        const futureBox = document.getElementById('futureBox').querySelector('.planets-list');
+        const pastBox = document.getElementById('pastBox').querySelector('.planets-list');
+
+        // --- FUNCTIONS ---
+
+        function showMessage(message, type = 'info') {
+            messageBox.textContent = message;
+            messageBox.style.display = 'block';
+            
+            // Reset classes
+            messageBox.className = 'message-box'; // base class
+            
+            if (type === 'error') {
+                messageBox.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+                messageBox.style.color = '#fca5a5';
+                messageBox.style.borderColor = '#991b1b';
+            } else {
+                messageBox.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
+                messageBox.style.color = '#6ee7b7';
+                messageBox.style.borderColor = '#065f46';
+            }
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 5000);
+        }
+
+        function initializePlanetInputs() {
+            planetInputsDiv.innerHTML = ''; 
+            karakaPlanetSelect.innerHTML = '<option value="">-- Select Planet --</option>'; 
+
+            planets.forEach(planet => {
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'input-group';
+                inputGroup.innerHTML = `
+                    <label for="${planet.toLowerCase()}Rasi" class="block text-xs font-semibold uppercase tracking-wider mb-1">${planet}</label>
+                    <div class="flex space-x-2">
+                        <select id="${planet.toLowerCase()}Rasi" class="flex-1 text-sm">
+                            <option value="">Sign</option>
+                            ${Object.keys(rasiData).map(rasi => `<option value="${rasi}">${rasiData[rasi].symbol} ${rasi}</option>`).join('')}
+                        </select>
+                        <input type="number" id="${planet.toLowerCase()}Degree" min="0" max="29.99" step="0.01" placeholder="Deg" class="w-20 text-sm">
+                    </div>
+                `;
+                planetInputsDiv.appendChild(inputGroup);
+
+                const option = document.createElement('option');
+                option.value = planet;
+                option.textContent = planet;
+                karakaPlanetSelect.appendChild(option);
+            });
+        }
+
+        function clearAllDisplays() {
+            eastPlanetsDiv.innerHTML = '';
+            southPlanetsDiv.innerHTML = '';
+            westPlanetsDiv.innerHTML = '';
+            northPlanetsDiv.innerHTML = '';
+            presentBox.innerHTML = '';
+            supportingBox.innerHTML = '';
+            futureBox.innerHTML = '';
+            pastBox.innerHTML = '';
+        }
+
+        function convertToDecimalDegree(degrees, minutes, seconds) {
+            return degrees + (minutes / 60) + (seconds / 3600);
+        }
+
+        function convertDecimalToDMSString(decimalDegree) {
+            const deg = Math.floor(decimalDegree);
+            const minutesDecimal = (decimalDegree - deg) * 60;
+            const min = Math.floor(minutesDecimal);
+            const secondsDecimal = (minutesDecimal - min) * 60;
+            const sec = secondsDecimal.toFixed(0); 
+            return `${deg}°${min}'`; // Simplified for cleaner UI
+        }
+
+        function parseAndPopulateData() {
+            const pastedText = pasteDataInput.value;
+            const lines = pastedText.split('\n');
+            const relevantLines = lines.slice(0, 15);
+            let parsedCount = 0;
+
+            planets.forEach(planetName => {
+                const rasiSelect = document.getElementById(`${planetName.toLowerCase()}Rasi`);
+                const degreeInput = document.getElementById(`${planetName.toLowerCase()}Degree`);
+                if (rasiSelect) rasiSelect.value = '';
+                if (degreeInput) degreeInput.value = '';
+            });
+
+            parsedPlanetsData = [];
+
+            relevantLines.forEach(line => {
+                const trimmedLine = line.trim();
+                if (!trimmedLine) return; 
+
+                const regex = new RegExp(`^(${planets.join('|')})\\s*(?:[A-Za-z0-9\\s\\(\\)-]+?)?(\\d{1,2})\\s+([A-Za-z]{2})\\s+(\\d{1,2})'\\s+(\\d{1,2}(?:\\.\\d{1,2})?)"`);
+                const match = trimmedLine.match(regex);
+
+                if (match) {
+                    const planetName = match[1];
+                    const degreePart = parseInt(match[2]);
+                    const rasiAbbr = match[3];
+                    const minutePart = parseInt(match[4]);
+                    const secondPart = parseFloat(match[5]);
+
+                    const fullRasiName = rasiAbbrToFull[rasiAbbr];
+
+                    if (fullRasiName) {
+                        const rasiSelect = document.getElementById(`${planetName.toLowerCase()}Rasi`);
+                        const degreeInput = document.getElementById(`${planetName.toLowerCase()}Degree`);
+
+                        if (rasiSelect && degreeInput) {
+                            const decimalDegree = convertToDecimalDegree(degreePart, minutePart, secondPart);
+                            rasiSelect.value = fullRasiName;
+                            degreeInput.value = (decimalDegree % 30).toFixed(2);
+                            parsedCount++;
+                        }
+                    }
+                }
+            });
+
+            if (parsedCount > 0) {
+                showMessage(`Aligned ${parsedCount} planets successfully.`, 'info');
+            } else {
+                showMessage('No planetary data found. Check format.', 'error');
+            }
+        }
+
+        function generateHoroscope() {
+            clearAllDisplays();
+
+            const planetsByDirection = { 'East': [], 'South': [], 'West': [], 'North': [] };
+            let isValid = true;
+            parsedPlanetsData = [];
+
+            planets.forEach(planetName => {
+                const rasiSelect = document.getElementById(`${planetName.toLowerCase()}Rasi`);
+                const degreeInput = document.getElementById(`${planetName.toLowerCase()}Degree`);
+                const rasi = rasiSelect.value;
+                const degree = parseFloat(degreeInput.value);
+
+                if (!rasi) return; 
+                
+                const planetInfo = { name: planetName, rasi: rasi, degree: isNaN(degree) ? 0 : degree };
+                
+                const astrologicalDirection = rasiData[rasi].direction;
+                if (astrologicalDirection) {
+                    planetsByDirection[astrologicalDirection].push(planetInfo);
+                    parsedPlanetsData.push(planetInfo);
+                }
+            });
+
+            if (!isValid) return;
+
+            for (const astrologicalDirection in planetsByDirection) {
+                planetsByDirection[astrologicalDirection].sort((a, b) => a.degree - b.degree);
+
+                let targetDiv;
+                if (astrologicalDirection === 'East') targetDiv = eastPlanetsDiv;
+                else if (astrologicalDirection === 'South') targetDiv = southPlanetsDiv;
+                else if (astrologicalDirection === 'West') targetDiv = westPlanetsDiv;
+                else if (astrologicalDirection === 'North') targetDiv = northPlanetsDiv;
+
+                if (targetDiv) {
+                    if (planetsByDirection[astrologicalDirection].length === 0) {
+                        targetDiv.innerHTML = '<p class="text-xs opacity-40 italic">Empty Void</p>';
+                    } else {
+                        planetsByDirection[astrologicalDirection].forEach(planet => {
+                            const planetDiv = document.createElement('div');
+                            planetDiv.className = 'planet-item';
+                            const dmsString = convertDecimalToDMSString(planet.degree);
+                            planetDiv.innerHTML = `
+                                <span class="font-bold text-astro-gold">${planet.name}</span>
+                                <span class="text-xs opacity-70">${planet.rasi} ${dmsString}</span>
+                            `;
+                            targetDiv.appendChild(planetDiv);
+                        });
+                    }
+                }
+            }
+            showMessage('Chart Revealed.', 'info');
+        }
+
+        function clearKarakaAnalysisDisplays() {
+            presentBox.innerHTML = '';
+            supportingBox.innerHTML = '';
+            futureBox.innerHTML = '';
+            pastBox.innerHTML = '';
+        }
+
+        function analyzeKaraka() {
+            clearKarakaAnalysisDisplays();
+
+            const selectedKarakaPlanetName = karakaPlanetSelect.value;
+            if (!selectedKarakaPlanetName) {
+                showMessage('Select a Significator.', 'error');
+                return;
+            }
+
+            if (parsedPlanetsData.length === 0) {
+                 showMessage('Generate chart first.', 'error');
+                 return;
+            }
+
+            const karakaPlanetInfo = parsedPlanetsData.find(p => p.name === selectedKarakaPlanetName);
+
+            if (!karakaPlanetInfo) {
+                showMessage(`No data for ${selectedKarakaPlanetName}.`, 'error');
+                return;
+            }
+
+            const karakaDirection = rasiData[karakaPlanetInfo.rasi].direction;
+            const presentDirection = karakaDirection;
+            const supportingDirection = directionRelationships[karakaDirection].opposite;
+            const futureDirection = directionRelationships[karakaDirection].clockwise90;
+
+            const allDirections = ['East', 'South', 'West', 'North'];
+            const usedDirections = [presentDirection, supportingDirection, futureDirection];
+            const pastDirection = allDirections.find(dir => !usedDirections.includes(dir));
+
+            const planetsInPresent = parsedPlanetsData.filter(p => rasiData[p.rasi].direction === presentDirection);
+            const planetsInSupporting = parsedPlanetsData.filter(p => rasiData[p.rasi].direction === supportingDirection);
+            const planetsInFuture = parsedPlanetsData.filter(p => rasiData[p.rasi].direction === futureDirection);
+            const planetsInPast = parsedPlanetsData.filter(p => rasiData[p.rasi].direction === pastDirection);
+
+            [planetsInPresent, planetsInSupporting, planetsInFuture, planetsInPast].forEach(list => list.sort((a, b) => a.degree - b.degree));
+
+            const renderPlanets = (targetDiv, planetList) => {
+                if (planetList.length === 0) {
+                    targetDiv.innerHTML = '<p class="text-xs opacity-50 italic">None</p>';
+                } else {
+                    targetDiv.innerHTML = '';
+                    planetList.forEach(planet => {
+                        const planetDiv = document.createElement('div');
+                        planetDiv.className = 'planet-item';
+                        const dmsString = convertDecimalToDMSString(planet.degree);
+                        // Highlight the Karaka planet itself if in the list
+                        const isKaraka = planet.name === selectedKarakaPlanetName;
+                        const nameClass = isKaraka ? 'font-bold text-white underline decoration-yellow-500' : 'font-medium';
+                        
+                        planetDiv.innerHTML = `
+                            <span class="${nameClass}">${planet.name}</span>
+                            <span class="text-xs opacity-80">${planet.rasi}</span>
+                        `;
+                        targetDiv.appendChild(planetDiv);
+                    });
+                }
+            };
+
+            renderPlanets(presentBox, planetsInPresent);
+            renderPlanets(supportingBox, planetsInSupporting);
+            renderPlanets(futureBox, planetsInFuture);
+            renderPlanets(pastBox, planetsInPast);
+
+            showMessage(`Destiny Analysis: ${selectedKarakaPlanetName}`, 'info');
+        }
+
+        generateHoroscopeBtn.addEventListener('click', generateHoroscope);
+        parseDataBtn.addEventListener('click', parseAndPopulateData);
+        analyzeKarakaBtn.addEventListener('click', analyzeKaraka);
+
+        window.onload = initializePlanetInputs;
+
+    </script>
+</body>
+</html>
