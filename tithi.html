@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tithi 3D Visualizer - Vedic Astrology</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1d3a 100%);
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        #container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #canvas-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #info-panel {
+            width: 400px;
+            background: rgba(20, 25, 45, 0.95);
+            overflow-y: auto;
+            padding: 20px;
+            border-left: 2px solid rgba(100, 150, 255, 0.3);
+            box-shadow: -5px 0 20px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease;
+        }
+
+        #info-panel.hidden {
+            transform: translateX(100%);
+        }
+
+        .info-toggle-btn {
+            position: absolute;
+            top: 50%;
+            right: 400px;
+            transform: translateY(-50%);
+            background: rgba(20, 25, 45, 0.9);
+            color: #64b5f6;
+            border: 2px solid rgba(100, 150, 255, 0.3);
+            padding: 8px 5px;
+            border-radius: 5px 0 0 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            z-index: 101;
+            transition: right 0.3s ease;
+            width: 25px;
+            text-align: center;
+        }
+
+        .info-toggle-btn.panel-hidden {
+            right: 0;
+        }
+
+        .info-toggle-btn:hover {
+            background: rgba(30, 35, 55, 0.95);
+        }
+
+        #info-panel h2 {
+            color: #64b5f6;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+            border-bottom: 2px solid rgba(100, 181, 246, 0.3);
+            padding-bottom: 10px;
+        }
+
+        #info-panel h3 {
+            color: #81c784;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        #info-panel p {
+            line-height: 1.6;
+            margin-bottom: 12px;
+            font-size: 0.95em;
+        }
+
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(20, 25, 45, 0.9);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            max-width: 140px;
+            z-index: 100;
+            font-size: 0.8em;
+        }
+
+        .control-group {
+            margin-bottom: 10px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 4px;
+            color: #64b5f6;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            margin: 3px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75em;
+            transition: transform 0.2s;
+            width: calc(50% - 6px);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            margin: 4px 0;
+            font-size: 0.85em;
+        }
+
+        .toggle-switch input {
+            margin-right: 5px;
+        }
+
+        .tithi-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(20, 25, 45, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            max-width: 220px;
+            text-align: center;
+            z-index: 100;
+        }
+
+        .tithi-name {
+            font-size: 1.3em;
+            color: #81c784;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .angle-info {
+            font-size: 0.85em;
+            color: #64b5f6;
+            margin: 3px 0;
+        }
+
+        .paksha-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        .shukla {
+            background: linear-gradient(135deg, #4fc3f7, #29b6f6);
+        }
+
+        .krishna {
+            background: linear-gradient(135deg, #ffb74d, #ff9800);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.85em;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid rgba(100, 150, 255, 0.2);
+        }
+
+        th {
+            background: rgba(100, 181, 246, 0.2);
+            color: #64b5f6;
+            font-weight: 600;
+        }
+
+        .collapsible {
+            cursor: pointer;
+            padding: 10px;
+            background: rgba(100, 181, 246, 0.1);
+            border-radius: 5px;
+            margin-top: 10px;
+            user-select: none;
+        }
+
+        .collapsible:hover {
+            background: rgba(100, 181, 246, 0.2);
+        }
+
+        .content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .content.active {
+            max-height: 2000px;
+        }
+
+        @media (max-width: 1024px) {
+            #info-panel {
+                width: 300px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            #container {
+                flex-direction: column;
+            }
+            #info-panel {
+                width: 100%;
+                height: 40vh;
+            }
+            .controls, .tithi-display {
+                position: relative;
+                top: auto;
+                left: auto;
+                right: auto;
+                margin: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="canvas-container">
+            <div class="controls">
+                <div class="control-group">
+                    <label>Moon Position (0° - 360°)</label>
+                    <input type="range" id="moonSlider" min="0" max="360" value="0" step="1">
+                    <span id="sliderValue">0°</span>
+                </div>
+                <div class="control-group">
+                    <button id="playBtn" style="width: calc(100% - 6px);">▶ Play</button>
+                    <button id="pauseBtn" style="display:none; width: calc(100% - 6px);">⏸ Pause</button>
+                </div>
+                <div class="control-group">
+                    <button onclick="jumpToAngle(0)">Amavasya</button>
+                    <button onclick="jumpToAngle(180)">Purnima</button>
+                </div>
+                <div class="control-group">
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="toggleOrbit" checked>
+                        <label for="toggleOrbit">Show Orbit</label>
+                    </div>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="toggleWheel" checked>
+                        <label for="toggleWheel">Show Tithi Wheel</label>
+                    </div>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="toggleArc" checked>
+                        <label for="toggleArc">Show Angle Arc</label>
+                    </div>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="toggleLabels" checked>
+                        <label for="toggleLabels">Show Labels</label>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Orbital Tilt: <span id="tiltValue">0°</span></label>
+                    <input type="range" id="tiltSlider" min="0" max="5" value="0" step="0.5">
+                    <button onclick="setTilt(0)" style="width: calc(50% - 6px);">No Tilt</button>
+                    <button onclick="setTilt(5)" style="width: calc(50% - 6px);">5° Tilt</button>
+                </div>
+            </div>
+
+            <div class="tithi-display">
+                <div class="tithi-name" id="tithiName">Amavasya</div>
+                <div class="angle-info">Sun: <span id="sunAngle">0°</span></div>
+                <div class="angle-info">Moon: <span id="moonAngle">0°</span></div>
+                <div class="angle-info">Separation: <span id="deltaAngle">0°</span></div>
+                <div class="paksha-badge shukla" id="pakshaTag">Shukla Paksha</div>
+            </div>
+
+            <button class="info-toggle-btn" id="infoPanelToggle" onclick="toggleInfoPanel()">◀</button>
+        </div>
+
+        <div id="info-panel">
+            <h2>Understanding Tithi in Vedic Astrology</h2>
+            
+            <div class="collapsible" onclick="toggleSection(this)">
+                <strong>▼ What is a Tithi?</strong>
+            </div>
+            <div class="content active">
+                <p>A <strong>Tithi</strong> is a lunar day in Vedic astrology, defined by the angular separation between the Sun and Moon as observed from Earth.</p>
+                <p><strong>Key Formula:</strong><br>
+                Tithi = floor((Moon Longitude - Sun Longitude) / 12°) + 1</p>
+                <p>Each Tithi represents a 12° increase in the angular distance between the Moon and Sun. There are 30 Tithis in a complete lunar month (synodic month).</p>
+                <p><strong>Why 12 degrees?</strong><br>
+                360° (full circle) ÷ 30 tithis = 12° per tithi</p>
+            </div>
+
+            <div class="collapsible" onclick="toggleSection(this)">
+                <strong>▼ Shukla Paksha (Waxing Phase)</strong>
+            </div>
+            <div class="content active">
+                <p>The <strong>bright fortnight</strong> when the Moon is moving away from the Sun (0° to 180°).</p>
+                <p><strong>Symbolism:</strong> Growth, expansion, manifestation, increasing light and energy.</p>
+                <p>Consists of 15 tithis from Pratipada (1st) to Purnima (15th - Full Moon).</p>
+                <p>This is an auspicious time for beginning new ventures, growth-oriented activities, and constructive endeavors.</p>
+            </div>
+
+            <div class="collapsible" onclick="toggleSection(this)">
+                <strong>▼ Krishna Paksha (Waning Phase)</strong>
+            </div>
+            <div class="content active">
+                <p>The <strong>dark fortnight</strong> when the Moon is moving toward the Sun (180° to 360°).</p>
+                <p><strong>Symbolism:</strong> Release, reduction, introspection, decreasing light and turning inward.</p>
+                <p>Consists of 15 tithis from Pratipada (1st) to Amavasya (15th/30th - New Moon).</p>
+                <p>This time is suitable for completion, letting go, spiritual practices, and inner work.</p>
+            </div>
+
+            <div class="collapsible" onclick="toggleSection(this)">
+                <strong>▼ Complete Tithi Table</strong>
+            </div>
+            <div class="content active">
+                <table>
+                    <tr>
+                        <th>Tithi</th>
+                        <th>Angle Range</th>
+                        <th>Paksha</th>
+                        <th>Meaning</th>
+                    </tr>
+                    <tr><td>1 Pratipada</td><td>0° - 12°</td><td>Shukla</td><td>New beginnings</td></tr>
+                    <tr><td>2 Dwitiya</td><td>12° - 24°</td><td>Shukla</td><td>Duality, partnerships</td></tr>
+                    <tr><td>3 Tritiya</td><td>24° - 36°</td><td>Shukla</td><td>Fire element, energy</td></tr>
+                    <tr><td>4 Chaturthi</td><td>36° - 48°</td><td>Shukla</td><td>Intellect, Ganesha</td></tr>
+                    <tr><td>5 Panchami</td><td>48° - 60°</td><td>Shukla</td><td>Balance, learning</td></tr>
+                    <tr><td>6 Shashthi</td><td>60° - 72°</td><td>Shukla</td><td>War god, strength</td></tr>
+                    <tr><td>7 Saptami</td><td>72° - 84°</td><td>Shukla</td><td>Sun god, vitality</td></tr>
+                    <tr><td>8 Ashtami</td><td>84° - 96°</td><td>Shukla</td><td>Goddess Durga</td></tr>
+                    <tr><td>9 Navami</td><td>96° - 108°</td><td>Shukla</td><td>Power, completion</td></tr>
+                    <tr><td>10 Dashami</td><td>108° - 120°</td><td>Shukla</td><td>Victory, success</td></tr>
+                    <tr><td>11 Ekadashi</td><td>120° - 132°</td><td>Shukla</td><td>Fasting, Lord Vishnu</td></tr>
+                    <tr><td>12 Dwadashi</td><td>132° - 144°</td><td>Shukla</td><td>Preparation</td></tr>
+                    <tr><td>13 Trayodashi</td><td>144° - 156°</td><td>Shukla</td><td>Auspicious activities</td></tr>
+                    <tr><td>14 Chaturdashi</td><td>156° - 168°</td><td>Shukla</td><td>Lord Shiva</td></tr>
+                    <tr><td>15 Purnima</td><td>168° - 180°</td><td>Shukla</td><td>Full Moon, completion</td></tr>
+                    <tr><td>1 Pratipada</td><td>180° - 192°</td><td>Krishna</td><td>New cycle</td></tr>
+                    <tr><td>2 Dwitiya</td><td>192° - 204°</td><td>Krishna</td><td>Reflection</td></tr>
+                    <tr><td>3 Tritiya</td><td>204° - 216°</td><td>Krishna</td><td>Releasing energy</td></tr>
+                    <tr><td>4 Chaturthi</td><td>216° - 228°</td><td>Krishna</td><td>Contemplation</td></tr>
+                    <tr><td>5 Panchami</td><td>228° - 240°</td><td>Krishna</td><td>Serpent deities</td></tr>
+                    <tr><td>6 Shashthi</td><td>240° - 252°</td><td>Krishna</td><td>Inner strength</td></tr>
+                    <tr><td>7 Saptami</td><td>252° - 264°</td><td>Krishna</td><td>Introspection</td></tr>
+                    <tr><td>8 Ashtami</td><td>264° - 276°</td><td>Krishna</td><td>Lord Krishna</td></tr>
+                    <tr><td>9 Navami</td><td>276° - 288°</td><td>Krishna</td><td>Conclusion</td></tr>
+                    <tr><td>10 Dashami</td><td>288° - 300°</td><td>Krishna</td><td>Completion</td></tr>
+                    <tr><td>11 Ekadashi</td><td>300° - 312°</td><td>Krishna</td><td>Spiritual fasting</td></tr>
+                    <tr><td>12 Dwadashi</td><td>312° - 324°</td><td>Krishna</td><td>Preparation</td></tr>
+                    <tr><td>13 Trayodashi</td><td>324° - 336°</td><td>Krishna</td><td>Auspicious ending</td></tr>
+                    <tr><td>14 Chaturdashi</td><td>336° - 348°</td><td>Krishna</td><td>Maha Shivaratri</td></tr>
+                    <tr><td>15 Amavasya</td><td>348° - 360°/0°</td><td>Krishna</td><td>New Moon, renewal</td></tr>
+                </table>
+            </div>
+
+            <div class="collapsible" onclick="toggleSection(this)">
+                <strong>▼ Cultural Significance</strong>
+            </div>
+            <div class="content active">
+                <p><strong>In Panchang:</strong> Tithi is one of the five key elements (Pancha Anga) used to determine auspicious times for activities.</p>
+                <p><strong>Religious Observances:</strong> Many Hindu festivals and fasting days are determined by specific tithis (e.g., Ekadashi, Chaturthi).</p>
+                <p><strong>Muhurta Selection:</strong> Certain tithis are considered more favorable for weddings, ceremonies, and important life events.</p>
+                <p><strong>Spiritual Practice:</strong> The lunar cycle influences meditation, yoga, and spiritual practices according to Vedic tradition.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Three.js Scene Setup
+        let scene, camera, renderer, controls;
+        let earth, sun, moon, orbitRing, tithiWheel, angleArc, labels = [];
+        let moonLabel, angleLabel, eclipseIndicator;
+        let moonAngle = 0;
+        let orbitalTilt = 0; // Tilt angle for moon's orbit (0-5 degrees)
+        let isAnimating = false;
+        let animationSpeed = 0.75;
+
+        // Tithi data
+        const tithiNames = [
+            "Pratipada", "Dwitiya", "Tritiya", "Chaturthi", "Panchami",
+            "Shashthi", "Saptami", "Ashtami", "Navami", "Dashami",
+            "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi", "Purnima"
+        ];
+
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050510);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(
+                50,
+                (window.innerWidth - 400) / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 20, 33);
+            camera.lookAt(0, 0, 0);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth - 400, window.innerHeight);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x404040, 1);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.PointLight(0xffff00, 2, 100);
+            sunLight.position.set(15, 0, 0);
+            scene.add(sunLight);
+
+            // Create Earth
+            const earthGeometry = new THREE.SphereGeometry(1, 32, 32);
+            const earthMaterial = new THREE.MeshPhongMaterial({
+                color: 0x2194ce,
+                emissive: 0x112244,
+                shininess: 10
+            });
+            earth = new THREE.Mesh(earthGeometry, earthMaterial);
+            
+            // Add Earth's shadow cone for lunar eclipse visualization
+            const shadowGeometry = new THREE.CylinderGeometry(0.1, 3, 30, 32, 1, true);
+            const shadowMaterial = new THREE.MeshBasicMaterial({
+                color: 0x000000,
+                transparent: true,
+                opacity: 0.4,
+                side: THREE.DoubleSide
+            });
+            const earthShadow = new THREE.Mesh(shadowGeometry, shadowMaterial);
+            earthShadow.rotation.z = Math.PI / 2;
+            earthShadow.position.x = -15;
+            earthShadow.visible = false;
+            earth.userData.shadow = earthShadow;
+            earth.add(earthShadow);
+            
+            scene.add(earth);
+
+            // Create Sun
+            const sunGeometry = new THREE.SphereGeometry(2, 32, 32);
+            const sunMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffff00
+            });
+            sun = new THREE.Mesh(sunGeometry, sunMaterial);
+            sun.position.set(15, 0, 0);
+            scene.add(sun);
+
+            // Sun glow
+            const glowGeometry = new THREE.SphereGeometry(2.5, 32, 32);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffaa00,
+                transparent: true,
+                opacity: 0.3
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            sun.add(glow);
+
+            // Create Moon
+            const moonGeometry = new THREE.SphereGeometry(0.7, 32, 32);
+            const moonMaterial = new THREE.MeshPhongMaterial({
+                color: 0xcccccc,
+                emissive: 0x222222,
+                shininess: 5
+            });
+            moon = new THREE.Mesh(moonGeometry, moonMaterial);
+            updateMoonPosition(0);
+            scene.add(moon);
+
+            // Create Orbit Ring
+            const orbitGeometry = new THREE.RingGeometry(11.8, 12.2, 64);
+            const orbitMaterial = new THREE.MeshBasicMaterial({
+                color: 0x4444ff,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.3
+            });
+            orbitRing = new THREE.Mesh(orbitGeometry, orbitMaterial);
+            orbitRing.rotation.x = Math.PI / 2;
+            scene.add(orbitRing);
+
+            // Create Tithi Wheel
+            createTithiWheel();
+
+            // Create Moon Label
+            createMoonLabel();
+
+            // Create Eclipse Indicator
+            createEclipseIndicator();
+
+            // Create Angle Arc
+            createAngleArc(0);
+
+            // Simple OrbitControls
+            setupControls();
+
+            // Event Listeners
+            document.getElementById('moonSlider').addEventListener('input', (e) => {
+                moonAngle = parseFloat(e.target.value);
+                document.getElementById('sliderValue').textContent = moonAngle.toFixed(0) + '°';
+                updateScene();
+            });
+
+            document.getElementById('playBtn').addEventListener('click', () => {
+                isAnimating = true;
+                document.getElementById('playBtn').style.display = 'none';
+                document.getElementById('pauseBtn').style.display = 'inline-block';
+            });
+
+            document.getElementById('pauseBtn').addEventListener('click', () => {
+                isAnimating = false;
+                document.getElementById('pauseBtn').style.display = 'none';
+                document.getElementById('playBtn').style.display = 'inline-block';
+            });
+
+            document.getElementById('toggleOrbit').addEventListener('change', (e) => {
+                orbitRing.visible = e.target.checked;
+            });
+
+            document.getElementById('toggleWheel').addEventListener('change', (e) => {
+                tithiWheel.visible = e.target.checked;
+            });
+
+            document.getElementById('toggleArc').addEventListener('change', (e) => {
+                if (angleArc) angleArc.visible = e.target.checked;
+            });
+
+            document.getElementById('toggleLabels').addEventListener('change', (e) => {
+                labels.forEach(label => label.visible = e.target.checked);
+                if (moonLabel) moonLabel.visible = e.target.checked;
+                if (angleLabel) angleLabel.visible = e.target.checked;
+            });
+
+            window.addEventListener('resize', onWindowResize);
+
+            // Start animation
+            animate();
+            updateScene();
+        }
+
+        function createTithiWheel() {
+            tithiWheel = new THREE.Group();
+            
+            // Create 30 tithi slices
+            for (let i = 0; i < 30; i++) {
+                const startAngle = (i * 12) * Math.PI / 180;
+                const endAngle = ((i + 1) * 12) * Math.PI / 180;
+                
+                const shape = new THREE.Shape();
+                shape.moveTo(0, 0);
+                shape.absarc(0, 0, 8, startAngle, endAngle, false);
+                shape.lineTo(0, 0);
+                
+                const geometry = new THREE.ShapeGeometry(shape);
+                const color = i < 15 ? 0x4fc3f7 : 0xffb74d;
+                const material = new THREE.MeshBasicMaterial({
+                    color: color,
+                    transparent: true,
+                    opacity: 0.2,
+                    side: THREE.DoubleSide
+                });
+                
+                const slice = new THREE.Mesh(geometry, material);
+                slice.userData = { index: i, originalOpacity: 0.2 };
+                tithiWheel.add(slice);
+            }
+            
+            tithiWheel.rotation.x = -Math.PI / 2;
+            tithiWheel.position.y = -0.5;
+            scene.add(tithiWheel);
+        }
+
+        function createMoonLabel() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 128;
+            const context = canvas.getContext('2d');
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ 
+                map: texture,
+                transparent: true
+            });
+            moonLabel = new THREE.Sprite(material);
+            moonLabel.scale.set(4, 2, 1);
+            moonLabel.userData.canvas = canvas;
+            moonLabel.userData.context = context;
+            scene.add(moonLabel);
+        }
+
+        function updateMoonLabel(tithiText) {
+            const canvas = moonLabel.userData.canvas;
+            const context = moonLabel.userData.context;
+            
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.fillStyle = 'rgba(20, 25, 45, 0.9)';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            
+            context.strokeStyle = '#64b5f6';
+            context.lineWidth = 3;
+            context.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+            
+            context.font = 'bold 24px Arial';
+            context.fillStyle = '#81c784';
+            context.textAlign = 'center';
+            context.fillText(tithiText, canvas.width / 2, 50);
+            
+            moonLabel.material.map.needsUpdate = true;
+            moonLabel.position.copy(moon.position);
+            moonLabel.position.y += 2.5;
+        }
+
+        function createEclipseIndicator() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 64;
+            const context = canvas.getContext('2d');
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ 
+                map: texture,
+                transparent: true
+            });
+            eclipseIndicator = new THREE.Sprite(material);
+            eclipseIndicator.scale.set(8, 1, 1);
+            eclipseIndicator.position.set(0, -5, 0);
+            eclipseIndicator.userData.canvas = canvas;
+            eclipseIndicator.userData.context = context;
+            eclipseIndicator.visible = false;
+            scene.add(eclipseIndicator);
+        }
+
+        function updateEclipseIndicator(angle) {
+            const canvas = eclipseIndicator.userData.canvas;
+            const context = eclipseIndicator.userData.context;
+            
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Check for eclipses (within ±5° tolerance)
+            let eclipseType = null;
+            if (Math.abs(angle - 0) < 5 || Math.abs(angle - 360) < 5) {
+                eclipseType = 'SOLAR ECLIPSE - Amavasya';
+                context.fillStyle = 'rgba(255, 100, 0, 0.9)';
+            } else if (Math.abs(angle - 180) < 5) {
+                eclipseType = 'LUNAR ECLIPSE - Purnima';
+                context.fillStyle = 'rgba(150, 50, 200, 0.9)';
+            }
+            
+            if (eclipseType) {
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                context.font = 'bold 32px Arial';
+                context.fillStyle = '#ffffff';
+                context.textAlign = 'center';
+                context.fillText('⚠️ ' + eclipseType + ' ⚠️', canvas.width / 2, 42);
+                eclipseIndicator.visible = true;
+                eclipseIndicator.material.map.needsUpdate = true;
+            } else {
+                eclipseIndicator.visible = false;
+            }
+        }
+
+        function createAngleArc(angle) {
+            if (angleArc) {
+                scene.remove(angleArc);
+            }
+            
+            if (angleLabel) {
+                scene.remove(angleLabel);
+            }
+            
+            const curve = new THREE.EllipseCurve(
+                0, 0,
+                13, 13,
+                0, angle * Math.PI / 180,
+                false,
+                0
+            );
+            
+            const points = curve.getPoints(50);
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const color = angle <= 180 ? 0x4fc3f7 : 0xffb74d;
+            const material = new THREE.LineBasicMaterial({ color: color, linewidth: 3 });
+            
+            angleArc = new THREE.Line(geometry, material);
+            angleArc.rotation.x = -Math.PI / 2;
+            angleArc.position.y = 0.1;
+            scene.add(angleArc);
+            
+            // Create angle label
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 64;
+            const context = canvas.getContext('2d');
+            
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.fillStyle = 'rgba(20, 25, 45, 0.9)';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            
+            context.strokeStyle = color === 0x4fc3f7 ? '#4fc3f7' : '#ffb74d';
+            context.lineWidth = 2;
+            context.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+            
+            context.font = 'bold 28px Arial';
+            context.fillStyle = '#ffffff';
+            context.textAlign = 'center';
+            context.fillText(angle.toFixed(0) + '°', canvas.width / 2, 42);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ 
+                map: texture,
+                transparent: true
+            });
+            angleLabel = new THREE.Sprite(spriteMaterial);
+            angleLabel.scale.set(2, 1, 1);
+            
+            // Position label at midpoint of arc
+            const midAngle = (angle / 2) * Math.PI / 180;
+            angleLabel.position.x = 10 * Math.cos(midAngle);
+            angleLabel.position.z = -10 * Math.sin(midAngle);
+            angleLabel.position.y = 0.5;
+            
+            scene.add(angleLabel);
+        }
+
+        function createMoonLabel() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 128;
+            const context = canvas.getContext('2d');
+            
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.fillStyle = 'rgba(20, 25, 45, 0.9)';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ 
+                map: texture,
+                transparent: true
+            });
+            moonLabel = new THREE.Sprite(material);
+            moonLabel.scale.set(4, 2, 1);
+            moonLabel.userData.canvas = canvas;
+            moonLabel.userData.context = context;
+            scene.add(moonLabel);
+        }
+
+        function updateMoonLabel(tithiText) {
+            if (!moonLabel) return;
+            
+            const canvas = moonLabel.userData.canvas;
+            const context = moonLabel.userData.context;
+            
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.fillStyle = 'rgba(20, 25, 45, 0.9)';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            
+            context.strokeStyle = '#64b5f6';
+            context.lineWidth = 3;
+            context.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+            
+            context.font = 'bold 24px Arial';
+            context.fillStyle = '#81c784';
+            context.textAlign = 'center';
+            context.fillText(tithiText, canvas.width / 2, 50);
+            
+            moonLabel.material.map.needsUpdate = true;
+            moonLabel.position.copy(moon.position);
+            moonLabel.position.y += 2.5;
+        }
+
+        function createEclipseIndicator() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 64;
+            const context = canvas.getContext('2d');
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ 
+                map: texture,
+                transparent: true
+            });
+            eclipseIndicator = new THREE.Sprite(material);
+            eclipseIndicator.scale.set(8, 1, 1);
+            eclipseIndicator.position.set(0, -5, 0);
+            eclipseIndicator.userData.canvas = canvas;
+            eclipseIndicator.userData.context = context;
+            eclipseIndicator.visible = false;
+            scene.add(eclipseIndicator);
+        }
+
+        function updateEclipseIndicator(angle) {
+            if (!eclipseIndicator) return;
+            
+            const canvas = eclipseIndicator.userData.canvas;
+            const context = eclipseIndicator.userData.context;
+            
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Check for eclipses (within ±8° tolerance for better visibility)
+            let eclipseType = null;
+            let isEclipse = false;
+            
+            if (Math.abs(angle - 0) < 8 || Math.abs(angle - 360) < 8) {
+                eclipseType = 'SOLAR ECLIPSE (Surya Grahan)';
+                context.fillStyle = 'rgba(255, 80, 0, 0.95)';
+                isEclipse = true;
+                // Darken the sun during solar eclipse
+                sun.material.color.setHex(0x884400);
+                // Add dark shadow on moon
+                moon.material.emissive.setHex(0x000000);
+                // Hide earth shadow
+                if (earth.userData.shadow) earth.userData.shadow.visible = false;
+            } else if (Math.abs(angle - 180) < 8) {
+                eclipseType = 'LUNAR ECLIPSE (Chandra Grahan)';
+                context.fillStyle = 'rgba(180, 50, 50, 0.95)';
+                isEclipse = true;
+                // Make moon reddish during lunar eclipse (blood moon)
+                moon.material.color.setHex(0xaa4444);
+                moon.material.emissive.setHex(0x440000);
+                // Show earth shadow cone
+                if (earth.userData.shadow) earth.userData.shadow.visible = true;
+            } else {
+                // Reset colors when not in eclipse
+                sun.material.color.setHex(0xffff00);
+                moon.material.color.setHex(0xcccccc);
+                if (earth.userData.shadow) earth.userData.shadow.visible = false;
+            }
+            
+            if (isEclipse) {
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Add glowing border effect
+                context.strokeStyle = '#ffff00';
+                context.lineWidth = 4;
+                context.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
+                
+                context.font = 'bold 36px Arial';
+                context.fillStyle = '#ffffff';
+                context.textAlign = 'center';
+                context.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                context.shadowBlur = 10;
+                context.fillText('⚠️ ' + eclipseType + ' ⚠️', canvas.width / 2, 44);
+                context.shadowBlur = 0;
+                
+                eclipseIndicator.visible = true;
+                eclipseIndicator.material.map.needsUpdate = true;
+                
+                // Add visual alignment line for eclipses
+                createEclipseLine(angle);
+            } else {
+                eclipseIndicator.visible = false;
+                removeEclipseLine();
+            }
+        }
+
+        let eclipseLine = null;
+        
+        function createEclipseLine(angle) {
+            removeEclipseLine();
+            
+            const points = [];
+            if (Math.abs(angle - 0) < 8 || Math.abs(angle - 360) < 8) {
+                // Solar eclipse - line from Sun through Moon
+                points.push(new THREE.Vector3(sun.position.x, 0, sun.position.z));
+                points.push(new THREE.Vector3(moon.position.x, 0, moon.position.z));
+                points.push(new THREE.Vector3(-20, 0, 0)); // Extend beyond
+            } else if (Math.abs(angle - 180) < 8) {
+                // Lunar eclipse - line from Sun through Earth to Moon
+                points.push(new THREE.Vector3(sun.position.x, 0, sun.position.z));
+                points.push(new THREE.Vector3(0, 0, 0)); // Earth
+                points.push(new THREE.Vector3(moon.position.x, 0, moon.position.z));
+            }
+            
+            if (points.length > 0) {
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const material = new THREE.LineDashedMaterial({
+                    color: 0xff0000,
+                    linewidth: 3,
+                    dashSize: 0.5,
+                    gapSize: 0.3
+                });
+                eclipseLine = new THREE.Line(geometry, material);
+                eclipseLine.computeLineDistances();
+                scene.add(eclipseLine);
+            }
+        }
+        
+        function removeEclipseLine() {
+            if (eclipseLine) {
+                scene.remove(eclipseLine);
+                eclipseLine = null;
+            }
+        }
+
+        function updateMoonPosition(angle) {
+            const radius = 12;
+            const rad = angle * Math.PI / 180;
+            moon.position.x = radius * Math.cos(rad);
+            moon.position.z = -radius * Math.sin(rad);
+            moon.position.y = 0;
+        }
+
+        function updateScene() {
+            updateMoonPosition(moonAngle);
+            createAngleArc(moonAngle);
+            updateTithiDisplay();
+            highlightCurrentTithi();
+            updateMoonPhase();
+            updateEclipseIndicator(moonAngle);
+        }
+
+        function updateTithiDisplay() {
+            const sunLong = 0; // Fixed for simplicity
+            const moonLong = moonAngle;
+            const delta = (moonLong - sunLong + 360) % 360;
+            
+            const tithiNum = Math.floor(delta / 12) + 1;
+            const paksha = delta <= 180 ? "Shukla" : "Krishna";
+            const tithiIndex = tithiNum > 15 ? tithiNum - 16 : tithiNum - 1;
+            const tithiName = tithiNum === 15 && paksha === "Shukla" ? "Purnima" : 
+                             tithiNum === 30 || (tithiNum === 15 && paksha === "Krishna") ? "Amavasya" :
+                             tithiNames[tithiIndex];
+            
+            const fullTithiName = paksha === "Shukla" && tithiNum !== 15 ? `Shukla ${tithiName}` :
+                paksha === "Krishna" && tithiNum <= 15 ? `Krishna ${tithiName}` :
+                tithiName;
+            
+            // Update info panel display
+            document.getElementById('tithiName').textContent = fullTithiName;
+            
+            // Update moon label
+            updateMoonLabel(fullTithiName);
+            
+            document.getElementById('sunAngle').textContent = sunLong.toFixed(0) + '°';
+            document.getElementById('moonAngle').textContent = moonLong.toFixed(0) + '°';
+            document.getElementById('deltaAngle').textContent = delta.toFixed(0) + '°';
+            
+            const pakshaTag = document.getElementById('pakshaTag');
+            pakshaTag.textContent = paksha + " Paksha";
+            pakshaTag.className = "paksha-badge " + paksha.toLowerCase();
+        }
+
+        function highlightCurrentTithi() {
+            const delta = moonAngle % 360;
+            const currentTithi = Math.floor(delta / 12);
+            
+            tithiWheel.children.forEach((slice, i) => {
+                if (i === currentTithi) {
+                    slice.material.opacity = 0.7;
+                } else {
+                    slice.material.opacity = slice.userData.originalOpacity;
+                }
+            });
+        }
+
+        function updateMoonPhase() {
+            // Calculate moon illumination based on angle
+            const delta = moonAngle % 360;
+            const illumination = delta <= 180 ? delta / 180 : (360 - delta) / 180;
+            
+            // Update moon material to show phase
+            moon.material.emissive.setHex(
+                Math.floor(illumination * 0x444444)
+            );
+        }
+
+        function setupControls() {
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+            
+            renderer.domElement.addEventListener('mousedown', () => {
+                isDragging = true;
+            });
+            
+            renderer.domElement.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    const deltaX = e.offsetX - previousMousePosition.x;
+                    const deltaY = e.offsetY - previousMousePosition.y;
+                    
+                    camera.position.x += deltaX * 0.05;
+                    camera.position.y -= deltaY * 0.05;
+                    camera.lookAt(0, 0, 0);
+                }
+                
+                previousMousePosition = { x: e.offsetX, y: e.offsetY };
+            });
+            
+            renderer.domElement.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+            
+            renderer.domElement.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = e.deltaY * 0.01;
+                camera.position.multiplyScalar(1 + delta * 0.1);
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (isAnimating) {
+                moonAngle = (moonAngle + animationSpeed) % 360;
+                document.getElementById('moonSlider').value = moonAngle;
+                document.getElementById('sliderValue').textContent = moonAngle.toFixed(0) + '°';
+                updateScene();
+            }
+            
+            // Rotate sun glow for effect
+            if (sun.children[0]) {
+                sun.children[0].rotation.y += 0.005;
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        function jumpToAngle(angle) {
+            moonAngle = angle;
+            document.getElementById('moonSlider').value = angle;
+            document.getElementById('sliderValue').textContent = angle + '°';
+            updateScene();
+        }
+
+        function onWindowResize() {
+            const panelWidth = document.getElementById('info-panel').classList.contains('hidden') ? 0 : 400;
+            const width = window.innerWidth - panelWidth;
+            const height = window.innerHeight;
+            
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        }
+
+        function toggleInfoPanel() {
+            const panel = document.getElementById('info-panel');
+            const button = document.getElementById('infoPanelToggle');
+            
+            panel.classList.toggle('hidden');
+            button.classList.toggle('panel-hidden');
+            
+            if (panel.classList.contains('hidden')) {
+                button.innerHTML = '▶';
+            } else {
+                button.innerHTML = '◀';
+            }
+            
+            onWindowResize();
+        }
+
+        function toggleSection(element) {
+            const content = element.nextElementSibling;
+            const isActive = content.classList.contains('active');
+            
+            if (isActive) {
+                content.classList.remove('active');
+                element.innerHTML = element.innerHTML.replace('▼', '▶');
+            } else {
+                content.classList.add('active');
+                element.innerHTML = element.innerHTML.replace('▶', '▼');
+            }
+        }
+
+        // Initialize the scene
+        init();
+    </script>
+</body>
+</html>

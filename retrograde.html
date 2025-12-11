@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vedic Astrology: Retrograde Motion Visualizer</title>
+    <style>
+        :root {
+            --bg-color: #050508;
+            --panel-bg: rgba(15, 20, 30, 0.85);
+            --text-main: #e0e0e0;
+            --accent: #f0c05a; /* Gold */
+            --retrograde: #992222;
+            --direct: #227733;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        /* UI Overlay */
+        .ui-layer {
+            position: absolute;
+            pointer-events: none; /* Let clicks pass through to canvas */
+            padding: 20px;
+            z-index: 10;
+        }
+
+        /* Header */
+        #header {
+            top: 0;
+            left: 0;
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--accent);
+            text-shadow: 0 0 10px rgba(240, 192, 90, 0.3);
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            font-style: italic;
+        }
+
+        /* Controls */
+        .control-panel {
+            pointer-events: auto;
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .bottom-controls {
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 90%;
+            max-width: 800px;
+        }
+
+        button, select {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-family: inherit;
+        }
+        
+        /* Ensure dropdown options are visible on all OS/Browsers */
+        select option {
+            background-color: #1a1a20;
+            color: white;
+        }
+
+        button:hover, select:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        button.active {
+            background: var(--accent);
+            color: black;
+            font-weight: bold;
+        }
+
+        /* Info Panel */
+        #info-panel {
+            top: 80px;
+            right: 20px;
+            width: 300px;
+            max-height: 80vh;
+            overflow-y: auto;
+            pointer-events: auto;
+            border-left: 3px solid var(--accent);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px 0;
+            font-size: 0.85rem;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        /* Status Indicator */
+        #status-box {
+            text-align: center;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            background: rgba(0,0,0,0.3);
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+
+        /* Inputs */
+        input[type=range] {
+            vertical-align: middle;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+
+        @media (max-width: 768px) {
+            #info-panel { display: none; } /* Hide info panel on mobile for space */
+            h1 { font-size: 1.2rem; }
+            .bottom-controls { width: 95%; bottom: 10px; padding: 10px; }
+        }
+    </style>
+    
+    <!-- Three.js CDN -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <!-- 3D Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Header -->
+    <div id="header" class="ui-layer">
+        <div>
+            <h1>Vakri Graha Visualizer</h1>
+            <div class="subtitle">Vedic Astrology Retrograde Motion Demo</div>
+        </div>
+        <div style="text-align: right; font-size: 0.8rem; font-family: monospace;">
+            Day: <span id="day-counter">0</span>
+        </div>
+    </div>
+
+    <!-- Side Panel (Info) -->
+    <div id="info-panel" class="ui-layer control-panel">
+        <div id="status-box">initializing...</div>
+        
+        <div style="margin-bottom: 15px;">
+            <div class="stat-row">
+                <span>Current Rashi:</span>
+                <span class="stat-value" id="stat-rashi">-</span>
+            </div>
+            <div class="stat-row">
+                <span>Longitude:</span>
+                <span class="stat-value" id="stat-degree">0°</span>
+            </div>
+            <div class="stat-row">
+                <span>Motion:</span>
+                <span class="stat-value" id="stat-speed">Normal</span>
+            </div>
+        </div>
+
+        <hr style="border-color: rgba(255,255,255,0.1);">
+
+        <h4>Legend</h4>
+        <div class="legend-item">
+            <span class="dot" style="background: var(--direct)"></span> Direct Motion (Margi)
+        </div>
+        <div class="legend-item">
+            <span class="dot" style="background: var(--retrograde)"></span> Retrograde (Vakri)
+        </div>
+        <div class="legend-item">
+            <span class="dot" style="background: white"></span> Projection Line (Drishti)
+        </div>
+
+        <h4>Educational Note</h4>
+        <p style="font-size: 0.85rem; line-height: 1.4; opacity: 0.8;">
+            In Vedic Astrology (Jyotish), a planet is <strong>Vakri</strong> (Crooked/Retrograde) when it appears to move backward in the zodiac. 
+            <br><br>
+            This is an optical illusion caused when Earth (Prithvi), moving faster on the inner orbit, overtakes an outer planet like Mars or Jupiter.
+        </p>
+    </div>
+
+    <!-- Bottom Controls -->
+    <div class="bottom-controls ui-layer control-panel">
+        <div style="display:flex; flex-direction:column; gap:5px;">
+            <label style="font-size:0.7rem; opacity:0.7">PLANET</label>
+            <select id="planet-selector">
+                <option value="mercury">Mercury (Budha)</option>
+                <option value="venus">Venus (Shukra)</option>
+                <option value="mars" selected>Mars (Mangal)</option>
+                <option value="jupiter">Jupiter (Guru)</option>
+                <option value="saturn">Saturn (Shani)</option>
+            </select>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:5px;">
+            <label style="font-size:0.7rem; opacity:0.7">SIMULATION</label>
+            <div style="display:flex; gap:5px;">
+                <button id="btn-play">Pause</button>
+                <button id="btn-reset">Reset</button>
+            </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:5px;">
+            <label style="font-size:0.7rem; opacity:0.7">SPEED</label>
+            <input type="range" id="speed-slider" min="0" max="2" step="0.1" value="0.5">
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:5px;">
+            <label style="font-size:0.7rem; opacity:0.7">VIEW</label>
+            <div style="display:flex; gap:5px;">
+                <button id="view-top" class="active">Top</button>
+                <button id="view-side">Side</button>
+                <button id="view-earth">Earth View</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- Configuration ---
+        const ZODIAC_RADIUS = 80;
+        const SUN_RADIUS = 4;
+        const EARTH_RADIUS = 1.5;
+        const EARTH_DISTANCE = 25;
+        
+        // Vedic Rashi Data - Colors updated for better contrast and distinction
+        const RASHIS = [
+            { sa: "Mesha", en: "Aries", color: "#FF5733" },      // Red-Orange (Mars)
+            { sa: "Vrishabha", en: "Taurus", color: "#F5F5DC" }, // Beige/Cream (Venus)
+            { sa: "Mithuna", en: "Gemini", color: "#2ECC71" },   // Emerald Green (Mercury)
+            { sa: "Karka", en: "Cancer", color: "#FFC0CB" },     // Pink (Moon)
+            { sa: "Simha", en: "Leo", color: "#F1C40F" },        // Gold (Sun)
+            { sa: "Kanya", en: "Virgo", color: "#27AE60" },      // Darker Green (Mercury)
+            { sa: "Tula", en: "Libra", color: "#D0ECE7" },       // Pale Teal (Venus)
+            { sa: "Vrishchika", en: "Scorpio", color: "#C0392B" }, // Deep Red (Mars)
+            { sa: "Dhanu", en: "Sagittarius", color: "#E67E22" },// Orange (Jupiter)
+            { sa: "Makara", en: "Capricorn", color: "#2980B9" }, // Strong Blue (Saturn)
+            { sa: "Kumbha", en: "Aquarius", color: "#5DADE2" },  // Sky Blue (Saturn/Rahu)
+            { sa: "Meena", en: "Pisces", color: "#8E44AD" }      // Violet (Jupiter)
+        ];
+
+        // Planetary Data (Simplified relative scales)
+        const PLANETS = {
+            mercury: { name: "Mercury", sanskrit: "Budha", dist: 12, speed: 4.15, size: 1, color: 0x44AA44, inclination: 0.12 },
+            venus:   { name: "Venus",   sanskrit: "Shukra", dist: 18, speed: 1.62, size: 1.4, color: 0xFFFFFF, inclination: 0.06 },
+            mars:    { name: "Mars",    sanskrit: "Mangal", dist: 38, speed: 0.53, size: 1.2, color: 0xFF3333, inclination: 0.05 },
+            jupiter: { name: "Jupiter", sanskrit: "Guru",   dist: 55, speed: 0.08, size: 3.0, color: 0xFFAA33, inclination: 0.02 },
+            saturn:  { name: "Saturn",  sanskrit: "Shani",  dist: 70, speed: 0.03, size: 2.5, color: 0x6666AA, inclination: 0.04 }
+        };
+
+        // --- Globals ---
+        let scene, camera, renderer, controls;
+        let sunMesh, earthMesh, activePlanetMesh;
+        let earthOrbitLine, planetOrbitLine;
+        let zodiacMesh;
+        let sightLine; // Line from Earth to Planet to Zodiac
+        let projectionDot; // The dot on the zodiac wall
+        
+        // Animation State
+        let isPaused = false;
+        let speedMultiplier = 0.5;
+        let time = 0;
+        let frameId;
+        let currentPlanet = 'mars';
+        let activeTrail = null;
+        let trailPoints = []; // Store history of apparent positions
+        let lastAngle = 0;
+        let isRetrograde = false;
+
+        // View State
+        let viewMode = 'top'; // top, side, earth
+
+        // --- Initialization ---
+        function init() {
+            const container = document.getElementById('canvas-container');
+            
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050508);
+            scene.fog = new THREE.FogExp2(0x050508, 0.006);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 100, 10);
+            camera.lookAt(0, 0, 0);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxDistance = 200;
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x404040, 2);
+            scene.add(ambientLight);
+            
+            const sunLight = new THREE.PointLight(0xFFD700, 3, 300);
+            scene.add(sunLight);
+
+            // Create Objects
+            createStarfield();
+            createSun();
+            createEarth();
+            createZodiacRing();
+            createSightLine();
+            
+            // Load Initial Planet
+            loadPlanet(currentPlanet);
+
+            // Event Listeners
+            window.addEventListener('resize', onWindowResize);
+            setupUI();
+
+            // Start Loop
+            animate();
+        }
+
+        // --- Object Creation Helpers ---
+
+        function createStarfield() {
+            const geo = new THREE.BufferGeometry();
+            const vertices = [];
+            for (let i = 0; i < 3000; i++) {
+                vertices.push(THREE.MathUtils.randFloatSpread(400));
+                vertices.push(THREE.MathUtils.randFloatSpread(200));
+                vertices.push(THREE.MathUtils.randFloatSpread(400));
+            }
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            const mat = new THREE.PointsMaterial({ color: 0x888888, size: 0.5 });
+            scene.add(new THREE.Points(geo, mat));
+        }
+
+        function createSun() {
+            const geometry = new THREE.SphereGeometry(SUN_RADIUS, 32, 32);
+            const material = new THREE.MeshBasicMaterial({ color: 0xFFD700 });
+            sunMesh = new THREE.Mesh(geometry, material);
+            
+            // Glow
+            const glowGeo = new THREE.SphereGeometry(SUN_RADIUS * 1.2, 32, 32);
+            const glowMat = new THREE.MeshBasicMaterial({ color: 0xFFA500, transparent: true, opacity: 0.3, side: THREE.BackSide });
+            sunMesh.add(new THREE.Mesh(glowGeo, glowMat));
+            
+            scene.add(sunMesh);
+        }
+
+        function createEarth() {
+            // Mesh
+            const geometry = new THREE.SphereGeometry(EARTH_RADIUS, 32, 32);
+            const material = new THREE.MeshPhongMaterial({ color: 0x2233FF, emissive: 0x111144 });
+            earthMesh = new THREE.Mesh(geometry, material);
+            scene.add(earthMesh);
+
+            // Orbit Path
+            const orbitCurve = new THREE.EllipseCurve(0, 0, EARTH_DISTANCE, EARTH_DISTANCE);
+            const points = orbitCurve.getPoints(128);
+            const orbitGeo = new THREE.BufferGeometry().setFromPoints(points);
+            orbitGeo.rotateX(-Math.PI / 2);
+            earthOrbitLine = new THREE.Line(orbitGeo, new THREE.LineBasicMaterial({ color: 0x334455 }));
+            scene.add(earthOrbitLine);
+        }
+
+        function createZodiacRing() {
+            // We use a canvas texture to draw the rashi names and degrees
+            const canvas = document.createElement('canvas');
+            canvas.width = 2048;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            
+            // Background
+            ctx.fillStyle = 'rgba(15, 15, 20, 0.9)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Rashis
+            const sectorWidth = canvas.width / 12;
+            
+            RASHIS.forEach((rashi, i) => {
+                const x = i * sectorWidth;
+                
+                // Color Strip at bottom
+                ctx.fillStyle = rashi.color;
+                ctx.fillRect(x, canvas.height - 10, sectorWidth, 10);
+                
+                // Vertical Divider
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+
+                // Sanskrit Name
+                ctx.textAlign = 'center';
+                ctx.fillStyle = rashi.color;
+                ctx.font = 'bold 40px Segoe UI, Arial';
+                ctx.fillText(rashi.sa, x + sectorWidth/2, 80);
+                
+                // English Name
+                ctx.fillStyle = '#888';
+                ctx.font = 'italic 30px Segoe UI, Arial';
+                ctx.fillText(rashi.en, x + sectorWidth/2, 130);
+
+                // Degree Ticks (0, 15, 30)
+                ctx.fillStyle = '#555';
+                ctx.font = '20px Monospace';
+                ctx.fillText("0°", x + 10, canvas.height - 20);
+                ctx.fillText("15°", x + sectorWidth/2, canvas.height - 20);
+            });
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.repeat.set(-1, 1); 
+            tex.offset.x = 0.25; // 90 degree shift
+
+            const geometry = new THREE.CylinderGeometry(ZODIAC_RADIUS, ZODIAC_RADIUS, 20, 64, 1, true);
+            const material = new THREE.MeshBasicMaterial({ 
+                map: tex, 
+                side: THREE.BackSide, 
+                transparent: true, 
+                opacity: 0.9
+            });
+            zodiacMesh = new THREE.Mesh(geometry, material);
+            scene.add(zodiacMesh);
+        }
+
+        function createSightLine() {
+            // Dashed line connecting Earth -> Planet -> Zodiac
+            const material = new THREE.LineDashedMaterial({
+                color: 0xaaaaaa,
+                dashSize: 1,
+                gapSize: 1,
+                opacity: 0.4,
+                transparent: true
+            });
+            const geometry = new THREE.BufferGeometry();
+            // Initial empty points
+            geometry.setFromPoints([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]);
+            sightLine = new THREE.Line(geometry, material);
+            scene.add(sightLine);
+
+            // Projection Dot on the wall
+            const dotGeo = new THREE.SphereGeometry(0.8, 8, 8);
+            const dotMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            projectionDot = new THREE.Mesh(dotGeo, dotMat);
+            scene.add(projectionDot);
+        }
+
+        function loadPlanet(planetKey) {
+            const data = PLANETS[planetKey];
+            
+            // Remove old planet info
+            if (activePlanetMesh) scene.remove(activePlanetMesh);
+            if (planetOrbitLine) scene.remove(planetOrbitLine);
+            if (activeTrail) scene.remove(activeTrail);
+            trailPoints = []; // Reset trail history
+
+            // 1. Planet Mesh
+            const geometry = new THREE.SphereGeometry(data.size, 32, 32);
+            const material = new THREE.MeshPhongMaterial({ color: data.color });
+            activePlanetMesh = new THREE.Mesh(geometry, material);
+            scene.add(activePlanetMesh);
+
+            // 2. Planet Orbit Line
+            // Note: We need to visualize the inclination.
+            const pts = [];
+            for(let i=0; i<=128; i++) {
+                const t = (i / 128) * Math.PI * 2;
+                pts.push(new THREE.Vector3(
+                    Math.cos(t) * data.dist,
+                    Math.sin(t) * data.dist * data.inclination, // Simple inclination Y wobble
+                    Math.sin(t) * data.dist
+                ));
+            }
+            const orbitGeo = new THREE.BufferGeometry().setFromPoints(pts);
+            planetOrbitLine = new THREE.Line(orbitGeo, new THREE.LineBasicMaterial({ color: data.color, opacity: 0.3, transparent: true }));
+            scene.add(planetOrbitLine);
+
+            // 3. Trail Line (Dynamic BufferGeometry)
+            // We will allocate a buffer large enough for the trail
+            const maxPoints = 1000;
+            const trailGeo = new THREE.BufferGeometry();
+            const positions = new Float32Array(maxPoints * 3);
+            const colors = new Float32Array(maxPoints * 3);
+            
+            trailGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            trailGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            
+            const trailMat = new THREE.LineBasicMaterial({ vertexColors: true });
+            activeTrail = new THREE.Line(trailGeo, trailMat);
+            activeTrail.frustumCulled = false; // Prevent flickering when updating bounds
+            scene.add(activeTrail);
+        }
+
+        // --- Logic & Animation ---
+
+        function animate() {
+            frameId = requestAnimationFrame(animate);
+
+            if (!isPaused) {
+                time += 0.01 * speedMultiplier;
+                
+                // Update UI Day Counter (Approx)
+                // 2PI = 1 Year (365 days)
+                const yearFraction = (time % (Math.PI*2)) / (Math.PI*2);
+                const day = Math.floor(time * (365 / (Math.PI * 2)));
+                document.getElementById('day-counter').innerText = day;
+            }
+
+            updatePositions();
+            updateView();
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function updatePositions() {
+            const pData = PLANETS[currentPlanet];
+            
+            // 1. Earth Position
+            const earthX = Math.cos(time) * EARTH_DISTANCE;
+            const earthZ = Math.sin(time) * EARTH_DISTANCE;
+            earthMesh.position.set(earthX, 0, earthZ);
+            earthMesh.rotation.y += 0.05;
+
+            // 2. Planet Position
+            // Speed is relative to Earth. 
+            const pAngle = time * pData.speed;
+            const pX = Math.cos(pAngle) * pData.dist;
+            const pZ = Math.sin(pAngle) * pData.dist;
+            const pY = Math.sin(pAngle) * pData.dist * pData.inclination; // Inclination
+            activePlanetMesh.position.set(pX, pY, pZ);
+
+            // 3. Projection (Drishti) Logic - UPDATED to be strictly collinear
+            // Vector from Earth to Planet (Ray Direction)
+            const dir = new THREE.Vector3().subVectors(activePlanetMesh.position, earthMesh.position).normalize();
+            
+            // Intersection with Zodiac Cylinder: (E + t*D)^2 = R^2 in XZ plane.
+            // origin: Earth (ex, ez)
+            // direction: dir (dx, dz)
+            // (ex + t*dx)^2 + (ez + t*dz)^2 = R^2
+            // t^2(dx^2+dz^2) + t(2(ex*dx + ez*dz)) + (ex^2+ez^2 - R^2) = 0
+            
+            const ex = earthX, ez = earthZ;
+            const dx = dir.x, dz = dir.z;
+            const R = ZODIAC_RADIUS;
+
+            const A = dx*dx + dz*dz;
+            const B = 2 * (ex*dx + ez*dz);
+            const C = ex*ex + ez*ez - R*R;
+
+            // Solve quadratic, take positive t (forward intersection)
+            let t = 0;
+            const det = B*B - 4*A*C;
+            if (det >= 0) {
+                t = (-B + Math.sqrt(det)) / (2*A);
+            }
+
+            const projX = ex + t * dx;
+            const projZ = ez + t * dz;
+            const projY = 0 + t * dir.y; // Linear extension in Y
+
+            const projPos = new THREE.Vector3(projX, projY, projZ);
+            
+            // Update Visuals
+            projectionDot.position.copy(projPos);
+            
+            const positions = sightLine.geometry.attributes.position.array;
+            // Start (Earth)
+            positions[0] = earthX; positions[1] = 0; positions[2] = earthZ;
+            // Mid (Planet)
+            positions[3] = pX; positions[4] = pY; positions[5] = pZ;
+            // End (Zodiac)
+            positions[6] = projX; positions[7] = projY; positions[8] = projZ;
+            sightLine.geometry.attributes.position.needsUpdate = true;
+            sightLine.computeLineDistances();
+
+            // 4. Retrograde Detection & Trail
+            // Calculate geocentric angle for astrology logic
+            const angle = Math.atan2(dir.z, dir.x);
+
+            if (!isPaused) {
+                // Calculate angular velocity (Change in angle)
+                // Handle wrap around PI/-PI
+                let delta = angle - lastAngle;
+                if (delta > Math.PI) delta -= 2*Math.PI;
+                if (delta < -Math.PI) delta += 2*Math.PI;
+
+                // If delta is negative (Clockwise), it is Retrograde (for most relative configs)
+                // *Note*: Earth moves CCW. Planets move CCW. 
+                // Retrograde appears as moving CW against stars.
+                isRetrograde = delta < 0;
+                
+                updateTrail(projPos, isRetrograde);
+                updateStats(angle, isRetrograde);
+
+                lastAngle = angle;
+            }
+        }
+
+        function updateTrail(pos, isRetro) {
+            // Shift old points
+            if (trailPoints.length > 800) trailPoints.shift();
+            
+            trailPoints.push({
+                x: pos.x, y: pos.y, z: pos.z,
+                isRetro: isRetro
+            });
+
+            // Rebuild Geometry
+            const positions = activeTrail.geometry.attributes.position.array;
+            const colors = activeTrail.geometry.attributes.color.array;
+            
+            const colorDirect = new THREE.Color(0x227733);
+            const colorRetro = new THREE.Color(0x992222);
+
+            for (let i = 0; i < trailPoints.length; i++) {
+                const pt = trailPoints[i];
+                positions[i*3] = pt.x;
+                positions[i*3+1] = pt.y;
+                positions[i*3+2] = pt.z;
+
+                const col = pt.isRetro ? colorRetro : colorDirect;
+                colors[i*3] = col.r;
+                colors[i*3+1] = col.g;
+                colors[i*3+2] = col.b;
+            }
+
+            activeTrail.geometry.setDrawRange(0, trailPoints.length);
+            activeTrail.geometry.attributes.position.needsUpdate = true;
+            activeTrail.geometry.attributes.color.needsUpdate = true;
+        }
+
+        function updateStats(radians, isRetro) {
+            // Convert Rad to Deg (0-360)
+            // ThreeJS: 0 is +X (East), +Z is South (90 deg).
+            // We want 0 deg = Aries. 
+            // At initialization we rotated texture so Aries is at +X. 
+            // However, atan2(z, x) gives CCW from +X.
+            // In sky, degrees usually increase Eastward.
+            
+            let deg = THREE.MathUtils.radToDeg(radians);
+            if (deg < 0) deg += 360;
+            
+            // Flip logic for standard map if needed, but let's stick to geometric angle
+            // Normalize to 360
+            
+            const rashiIndex = Math.floor(deg / 30);
+            const rashi = RASHIS[rashiIndex % 12];
+            const degInRashi = (deg % 30).toFixed(1);
+            
+            // UI Updates
+            const statusBox = document.getElementById('status-box');
+            const speedSpan = document.getElementById('stat-speed');
+
+            document.getElementById('stat-rashi').innerText = rashi.sa + " (" + rashi.en + ")";
+            document.getElementById('stat-degree').innerText = degInRashi + "°";
+            
+            if (isRetro) {
+                statusBox.innerText = "VAKRI (Retrograde)";
+                statusBox.style.color = "var(--retrograde)";
+                statusBox.style.border = "1px solid var(--retrograde)";
+                speedSpan.innerText = "Backwards";
+                speedSpan.style.color = "var(--retrograde)";
+            } else {
+                statusBox.innerText = "MARGI (Direct)";
+                statusBox.style.color = "var(--direct)";
+                statusBox.style.border = "1px solid var(--direct)";
+                speedSpan.innerText = "Forward";
+                speedSpan.style.color = "var(--direct)";
+            }
+        }
+
+        function updateView() {
+            if (viewMode === 'earth') {
+                // Place camera on Earth, look at planet
+                // Lift y slightly so we aren't inside the mesh
+                camera.position.copy(earthMesh.position).add(new THREE.Vector3(0, 2, 0));
+                camera.lookAt(activePlanetMesh.position);
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- UI Setup ---
+        function setupUI() {
+            // Buttons
+            document.getElementById('btn-play').onclick = function() {
+                isPaused = !isPaused;
+                this.innerText = isPaused ? "Play" : "Pause";
+                this.classList.toggle('active', !isPaused);
+            };
+
+            document.getElementById('btn-reset').onclick = function() {
+                time = 0;
+                trailPoints = [];
+                lastAngle = 0;
+                // Reset trails
+                activeTrail.geometry.setDrawRange(0, 0);
+            };
+
+            // Planet Selector
+            document.getElementById('planet-selector').onchange = function(e) {
+                currentPlanet = e.target.value;
+                loadPlanet(currentPlanet);
+                // Reset trails on switch
+                trailPoints = [];
+                time = 0;
+            };
+
+            // Speed Slider
+            document.getElementById('speed-slider').oninput = function(e) {
+                speedMultiplier = parseFloat(e.target.value);
+            };
+
+            // View Toggles
+            const views = ['view-top', 'view-side', 'view-earth'];
+            views.forEach(id => {
+                document.getElementById(id).onclick = function() {
+                    // UI
+                    views.forEach(v => document.getElementById(v).classList.remove('active'));
+                    this.classList.add('active');
+
+                    // Logic
+                    const mode = id.replace('view-', '');
+                    viewMode = mode;
+                    
+                    if (mode === 'top') {
+                        controls.enabled = true;
+                        camera.position.set(0, 100, 10);
+                        camera.lookAt(0,0,0);
+                    } else if (mode === 'side') {
+                        controls.enabled = true;
+                        camera.position.set(0, 10, 120);
+                        camera.lookAt(0,0,0);
+                    } else if (mode === 'earth') {
+                        controls.enabled = false; // Lock controls in POV
+                    }
+                }
+            });
+        }
+
+        // Boot
+        init();
+
+    </script>
+</body>
+</html>

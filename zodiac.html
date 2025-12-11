@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>3D Vedic Astrology Visualizer (Rāśi & Nakṣatra)</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Import Three.js (classic build) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- Import OrbitControls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <!-- Import CSS2DRenderer for 3D labels -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
+
+    <style>
+        /* Basic page setup */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: #fff;
+            overflow: hidden; /* Prevent scrollbars */
+        }
+
+        /* The 3D scene container */
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        /* The canvas rendered by Three.js */
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Main UI panel */
+        #ui-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 10px;
+            z-index: 100;
+            max-width: 250px;
+        }
+
+        #ui-panel h3 {
+            margin: 0 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #555;
+            font-size: 16px;
+        }
+
+        .toggle-group {
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        .toggle-group input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        
+        .slider-group {
+            margin-bottom: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .slider-group label {
+            font-size: 12px;
+            margin-bottom: 4px;
+            color: #aaa;
+        }
+
+        .toggle-group label {
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        /* Learning Mode Panel */
+        #learning-panel {
+            position: absolute;
+            bottom: 10px;
+            right: 10px; /* Changed from left to right */
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+            z-index: 100;
+            max-width: 300px;
+            font-size: 13px;
+            line-height: 1.5;
+            display: none; /* Hidden by default */
+        }
+        #learning-panel h4 {
+            margin: 0 0 10px 0;
+            color: #0af;
+        }
+        #learning-panel p {
+            margin: 0 0 10px 0;
+        }
+
+        /* Tooltip for hover info - REMOVED as requested */
+        #tooltip {
+            display: none; 
+        }
+        
+        /* Base style for all CSS2D labels */
+        .label {
+            color: #ccc;
+            font-size: 12px;
+            text-shadow: 0 0 4px #000;
+            pointer-events: none; /* Pass clicks through */
+            text-align: center;
+        }
+
+        .ecliptic-label {
+            color: #00ffff;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .equator-label {
+            color: #44ff88;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .rasi-label {
+            color: #ffab40; /* Amber */
+            font-size: 12px;
+            font-weight: bold;
+            opacity: 0.7;
+        }
+
+        .rasi-figurine-label {
+            font-size: 24px;
+            opacity: 0.8;
+            /* No color, uses default emoji color */
+        }
+        
+        .nakshatra-label {
+            color: #90caf9; /* Light Blue */
+            font-size: 10px;
+            opacity: 0.7;
+        }
+
+        .star-label {
+            color: #fff;
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow: 0 0 6px #000;
+            background: rgba(0,0,0,0.3);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .planet-label {
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 0 0 4px #000;
+            margin-top: -5px; 
+        }
+
+        .equinox-label {
+            color: #ff88ff;
+            font-size: 14px;
+            font-weight: bold;
+            background: rgba(0,0,0,0.5);
+            padding: 2px 5px;
+            border: 1px solid #ff88ff;
+            border-radius: 4px;
+        }
+
+        .pole-label {
+            color: #8899aa;
+            font-size: 12px;
+            font-style: italic;
+            opacity: 0.8;
+        }
+        
+        .sidereal-label {
+            color: #ff4444;
+            font-size: 12px;
+            font-weight: bold;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid #ff4444;
+            padding: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D Scene Container -->
+    <div id="container"></div>
+
+    <!-- UI Panel for Toggles -->
+    <div id="ui-panel">
+        <h3>Display Options</h3>
+        <div class="slider-group">
+            <label for="speedSlider">Planet Speed</label>
+            <input type="range" id="speedSlider" min="0" max="2" step="0.1" value="1">
+        </div>
+        <!-- NEW: Ayanamsa Slider -->
+        <div class="slider-group">
+            <label for="ayanamsaSlider">Ayanamsa (°) <span id="ayanamsaValue">24</span>°</label>
+            <input type="range" id="ayanamsaSlider" min="0" max="30" step="0.5" value="24">
+        </div>
+        
+        <div class="toggle-group">
+            <input type="checkbox" id="toggleCelestialSphere" checked>
+            <label for="toggleCelestialSphere">Celestial Sphere Grid</label>
+        </div>
+        <div class="toggle-group">
+            <input type="checkbox" id="toggleEcliptic" checked>
+            <label for="toggleEcliptic">Ecliptic & Equator</label>
+        </div>
+        <div class="toggle-group">
+            <input type="checkbox" id="toggleZodiacBelt" checked>
+            <label for="toggleZodiacBelt">Zodiac Belt (±9°)</label>
+        </div>
+        <div class="toggle-group">
+            <input type="checkbox" id="toggleEquinoxes" checked>
+            <label for="toggleEquinoxes">Equinoxes</label>
+        </div>
+        <div class="toggle-group">
+            <input type="checkbox" id="toggleEarth" checked>
+            <label for="toggleEarth">Earth</label>
+        </div>
+        <div class="toggle-group">
+            <input type="checkbox" id="togglePlanets" checked>
+            <label for="togglePlanets">Planets</label>
+        </div>
+        <div class="toggle-group">
+            <input type="checkbox" id="toggleRasis" checked>
+            <label for="toggleRasis">Rāśis (Signs)</label> 
+        </div>
+        <div class="toggle-group">
+            <input type="checkbox" id="toggleNakshatras" checked>
+            <label for="toggleNakshatras">Nakṣatras (Stars)</label> 
+        </div>
+        <div class="toggle-group">
+            <input type="checkbox" id="toggleStarLabels" checked>
+            <label for="toggleStarLabels">Bright Star Names</label>
+        </div>
+        <div class="toggle-group">
+            <input type="checkbox" id="toggleLearningMode">
+            <label for="toggleLearningMode">Learning Mode</label>
+        </div>
+    </div>
+    
+    <!-- Learning Mode Panel -->
+    <div id="learning-panel">
+        <h4>Ayanamsa (Precession)</h4>
+        <p>This slider shifts the Zodiac ring relative to the Earth and Equinoxes.</p>
+        <ul>
+            <li><strong>0° (Sayana/Tropical):</strong> 0° Aries aligns exactly with the Vernal Equinox.</li>
+            <li><strong>~24° (Nirayana/Sidereal):</strong> The Zodiac is shifted to align with fixed stars. The Sun at Equinox is seen in Pisces.</li>
+        </ul>
+
+        <h4>Zodiac Belt</h4>
+        <p>The <strong>Zodiac Belt</strong> (gold band) extends about 9° on either side of the Ecliptic. The planets are always found within this narrow highway in the sky.</p>
+
+        <h4>Vernal & Autumn Equinox</h4>
+        <p>The points where the <strong>Celestial Equator</strong> (green) intersects the <strong>Ecliptic</strong> (cyan). The Sun crosses the Vernal Equinox (0° Aries) around March 20th, marking the start of Spring.</p>
+        
+        <h4>The Planets (Grahas)</h4>
+        <p>In Vedic Astrology, we use a <strong>Geocentric</strong> model (Earth at center). The planets, Sun, and Moon appear to move along the Ecliptic belt against the backdrop of the stars.</p>
+
+        <h4>What is the Ecliptic?</h4>
+        <p>The apparent path the Sun travels through the sky. All planets orbit roughly on this plane.</p>
+        
+        <h4>Why 12 Rāśis?</h4>
+        <p>The 360° Ecliptic is divided into 12 equal 30° sectors (Signs). They provide the primary backdrop for planetary positions.</p>
+        
+        <h4>Why 27 Nakṣatras?</h4>
+        <p>A finer 13°20' division used for the Moon's daily motion.</p>
+    </div>
+
+    <!-- Tooltip Element (Hidden) -->
+    <div id="tooltip"></div>
+
+    <!-- Main Application Logic -->
+    <script>
+        // --- Global Variables ---
+        let scene, camera, renderer, labelRenderer, controls;
+        let starfield;
+        
+        // Groups for toggling visibility
+        const eclipticGroup = new THREE.Group();
+        const equinoxGroup = new THREE.Group();
+        const planetGroup = new THREE.Group();
+        
+        // NEW: Ayanamsa Group to hold everything that shifts with precession (Sidereal Zodiac)
+        const ayanamsaGroup = new THREE.Group();
+        
+        const rasiGroup = new THREE.Group();
+        const rasiFigurineGroup = new THREE.Group();
+        const rasiLabelGroup = new THREE.Group(); 
+        const nakshatraGroup = new THREE.Group();
+        const nakshatraLabelGroup = new THREE.Group();
+        const starLabelGroup = new THREE.Group();
+        const starMeshGroup = new THREE.Group();
+        const celestialSphereGroup = new THREE.Group(); 
+        const zodiacBeltGroup = new THREE.Group();
+
+        // Arrays for interactivity
+        const rasiMeshes = [];
+        const nakshatraMeshes = [];
+        const planetMeshes = [];
+        
+        // Constants
+        const ECLIPTIC_RADIUS = 100;
+        const RASI_INNER_RADIUS = 105;
+        const RASI_OUTER_RADIUS = 125;
+        const NAKSHATRA_INNER_RADIUS = 130;
+        const NAKSHATRA_OUTER_RADIUS = 145;
+        const NAKSHATRA_LABEL_RADIUS = 150;
+        const STAR_SPHERE_RADIUS = 500;
+        const NAKSHATRA_DEG = 40 / 3; // 13.333... degrees
+        const EQUATORIAL_TILT = 23.44; // degrees
+        const CELESTIAL_SPHERE_RADIUS = 100; 
+
+        // --- Data ---
+        
+        const RASI_DATA = [
+            { id: 'Mesha', name: 'Aries', deg: '0°-30°', figurine: '🐏', symbol: '♈' },
+            { id: 'Vrishabha', name: 'Taurus', deg: '30°-60°', figurine: '🐂', symbol: '♉' },
+            { id: 'Mithuna', name: 'Gemini', deg: '60°-90°', figurine: '👬', symbol: '♊' },
+            { id: 'Karka', name: 'Cancer', deg: '90°-120°', figurine: '🦀', symbol: '♋' },
+            { id: 'Simha', name: 'Leo', deg: '120°-150°', figurine: '🦁', symbol: '♌' },
+            { id: 'Kanya', name: 'Virgo', deg: '150°-180°', figurine: '💃', symbol: '♍' },
+            { id: 'Tula', name: 'Libra', deg: '180°-210°', figurine: '⚖️', symbol: '♎' },
+            { id: 'Vrischika', name: 'Scorpio', deg: '210°-240°', figurine: '🦂', symbol: '♏' },
+            { id: 'Dhanus', name: 'Sagittarius', deg: '240°-270°', figurine: '🏹', symbol: '♐' },
+            { id: 'Makara', name: 'Capricorn', deg: '270°-300°', figurine: '🐐', symbol: '♑' },
+            { id: 'Kumbha', name: 'Aquarius', deg: '300°-330°', figurine: '🏺', symbol: '♒' },
+            { id: 'Meena', name: 'Pisces', deg: '330°-360°', figurine: '🐟', symbol: '♓' }
+        ];
+
+        const NAKSHATRA_DATA = [
+            { id: 'Ashwini', ruler: 'Ketu', symbol: 'Horse Head' },
+            { id: 'Bharani', ruler: 'Venus', symbol: 'Yoni' },
+            { id: 'Krittika', ruler: 'Sun', symbol: 'Knife / Spear' },
+            { id: 'Rohini', ruler: 'Moon', symbol: 'Cart / Temple' },
+            { id: 'Mrigashira', ruler: 'Mars', symbol: 'Deer\'s Head' },
+            { id: 'Ardra', ruler: 'Rahu', symbol: 'Teardrop / Diamond' },
+            { id: 'Punarvasu', ruler: 'Jupiter', symbol: 'Quiver of Arrows' },
+            { id: 'Pushya', ruler: 'Saturn', symbol: 'Cow\'s Udder / Flower' },
+            { id: 'Ashlesha', ruler: 'Mercury', symbol: 'Serpent' },
+            { id: 'Magha', ruler: 'Ketu', symbol: 'Royal Throne' },
+            { id: 'Purva Phalguni', ruler: 'Venus', symbol: 'Front legs of Bed' },
+            { id: 'Uttara Phalguni', ruler: 'Sun', symbol: 'Back legs of Bed' },
+            { id: 'Hasta', ruler: 'Moon', symbol: 'Hand' },
+            { id: 'Chitra', ruler: 'Mars', symbol: 'Pearl / Gem' },
+            { id: 'Swati', ruler: 'Rahu', symbol: 'Shoot of Plant' },
+            { id: 'Vishakha', ruler: 'Jupiter', symbol: 'Triumphal Arch' },
+            { id: 'Anuradha', ruler: 'Saturn', symbol: 'Lotus Flower' },
+            { id: 'Jyeshtha', ruler: 'Mercury', symbol: 'Earring / Talisman' },
+            { id: 'Mula', ruler: 'Ketu', symbol: 'Roots' },
+            { id: 'Purva Ashadha', ruler: 'Venus', symbol: 'Winnowing Basket' },
+            { id: 'Uttara Ashadha', ruler: 'Sun', symbol: 'Elephant\'s Tusk' },
+            { id: 'Abhijit', ruler: 'Brahma', symbol: 'Eagle / Triangle' }, 
+            { id: 'Shravana', ruler: 'Moon', symbol: 'Ear / 3 Footprints' },
+            { id: 'Dhanishtha', ruler: 'Mars', symbol: 'Drum (Mridangam)' },
+            { id: 'Shatabhisha', ruler: 'Rahu', symbol: 'Empty Circle' },
+            { id: 'Purva Bhadrapada', ruler: 'Jupiter', symbol: 'Front legs of Cot' },
+            { id: 'Uttara Bhadrapada', ruler: 'Saturn', symbol: 'Back legs of Cot' },
+            { id: 'Revati', ruler: 'Mercury', symbol: 'Fish / Drum' }
+        ];
+
+        // UPDATED: Star Data now uses SIDEREAL Longitudes.
+        // Spica is defined as exactly 180.0 degrees in the Lahiri system (Chitra Paksha).
+        const STAR_DATA = [
+            { name: 'Pleiades (Krittika)', long: 37.3, info: 'A star cluster in Vrishabha (Taurus)' }, // Approx Sidereal
+            { name: 'Aldebaran (Rohini)', long: 45.9, info: 'A red giant, the "Eye of the Bull"' },
+            { name: 'Regulus (Magha)', long: 125.8, info: 'A blue-white star, the "Heart of the Lion"' },
+            { name: 'Spica (Chitra)', long: 180.0, info: '<b>Fiducial Star</b><br>Defines the start of Libra (180°) in Nirayana Chakra.', isFiducial: true }, // EXACT 180
+            { name: 'Antares (Jyeshtha)', long: 225.7, info: 'A red supergiant, the "Heart of the Scorpion"' }
+        ];
+        
+        const PLANET_DATA = [
+            { name: 'Sun', color: 0xFFFF00, size: 4, angle: 0, speed: 0.02, info: 'Signifies Soul, Father, Authority' }, 
+            { name: 'Moon', color: 0xEEEEEE, size: 3, angle: 45, speed: 0.1, info: 'Signifies Mind, Mother, Emotions' },
+            { name: 'Mars', color: 0xFF4500, size: 2.5, angle: 90, speed: 0.05, info: 'Signifies Energy, Brothers, Strength' },
+            { name: 'Mercury', color: 0xAAAAAA, size: 2, angle: 135, speed: 0.08, info: 'Signifies Intellect, Speech, Trade' },
+            { name: 'Jupiter', color: 0xFFA500, size: 5, angle: 200, speed: 0.01, info: 'Signifies Wisdom, Guru, Expansion' },
+            { name: 'Venus', color: 0xFFFACD, size: 3.5, angle: 250, speed: 0.06, info: 'Signifies Love, Beauty, Luxury' },
+            { name: 'Saturn', color: 0xD2B48C, size: 4.5, angle: 300, ring: true, speed: 0.005, info: 'Signifies Discipline, Delay, Karma' },
+            { name: 'Rahu', color: 0x333333, size: 2, angle: 340, speed: -0.002, info: 'North Node. Illusion, Obsession. (Retrograde)' }, 
+            { name: 'Ketu', color: 0x555555, size: 2, angle: 160, speed: -0.002, info: 'South Node. Detachment, Liberation. (Retrograde)' }
+        ];
+
+        // --- Initialization ---
+        
+        init();
+        animate();
+        
+        function init() {
+            // Get container
+            const container = document.getElementById('container');
+
+            // --- Scene Setup ---
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+
+            // --- Camera Setup ---
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(150, 100, 150);
+            camera.lookAt(scene.position);
+
+            // --- Renderer Setup ---
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // --- Label Renderer Setup ---
+            labelRenderer = new THREE.CSS2DRenderer();
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.domElement.style.position = 'absolute';
+            labelRenderer.domElement.style.top = '0px';
+            container.appendChild(labelRenderer.domElement);
+
+            // --- Controls Setup ---
+            controls = new THREE.OrbitControls(camera, labelRenderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 10;
+            controls.maxDistance = 1000;
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.5;
+
+            // --- Lights Setup ---
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(50, 50, 50);
+            scene.add(directionalLight);
+
+            // --- Create Celestial Objects ---
+            createStarfield();
+            createCelestialSphere(); 
+            createEarth();
+            createEcliptic();
+            createZodiacBelt(); 
+            createEquinoxes(); 
+            createPlanets();   
+            createRasis();
+            createNakshatras();
+            createNakshatraStars();
+            createSiderealMarker(); // NEW
+
+            // Add groups to scene
+            
+            // Static Groups (Tropical/Earth based)
+            scene.add(eclipticGroup);
+            scene.add(zodiacBeltGroup); 
+            scene.add(celestialSphereGroup);
+            scene.add(equinoxGroup);
+            scene.add(planetGroup);
+            
+            // Dynamic Groups (Sidereal based) - Added to ayanamsaGroup
+            ayanamsaGroup.add(rasiGroup);
+            ayanamsaGroup.add(rasiFigurineGroup);
+            ayanamsaGroup.add(rasiLabelGroup);
+            ayanamsaGroup.add(nakshatraGroup);
+            ayanamsaGroup.add(nakshatraLabelGroup);
+            ayanamsaGroup.add(starLabelGroup);
+            ayanamsaGroup.add(starMeshGroup);
+            if(starfield) ayanamsaGroup.add(starfield); // Move starfield to rotating group
+
+            // Add the Ayanamsa group itself to the scene
+            scene.add(ayanamsaGroup);
+
+            // --- UI & Event Listeners ---
+            setupUI();
+            window.addEventListener('resize', onWindowResize, false);
+
+            // --- Run Tests ---
+            runTests();
+        }
+
+        // --- Core Creation Functions ---
+
+        function createStarfield() {
+            const starVertices = [];
+            for (let i = 0; i < 15000; i++) {
+                const x = THREE.MathUtils.randFloatSpread(2000);
+                const y = THREE.MathUtils.randFloatSpread(2000);
+                const z = THREE.MathUtils.randFloatSpread(2000);
+                const d = Math.sqrt(x*x + y*y + z*z);
+                const r = THREE.MathUtils.randFloat(800, 1000);
+                starVertices.push(x/d * r, y/d * r, z/d * r);
+            }
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.8, transparent: true, opacity: 0.8, sizeAttenuation: true });
+            starfield = new THREE.Points(geometry, material);
+            // Note: We add this to ayanamsaGroup in init() now, not scene directly
+        }
+        
+        function createCelestialSphere() {
+            // Wireframe sphere representing Celestial Sphere (RA/Dec grid)
+            const geometry = new THREE.SphereGeometry(CELESTIAL_SPHERE_RADIUS, 24, 24);
+            const wireframe = new THREE.WireframeGeometry(geometry);
+            const line = new THREE.LineSegments(wireframe);
+            line.material.color.setHex(0x8899aa); // Lighter bluish grey
+            line.material.opacity = 0.4;
+            line.material.transparent = true;
+            
+            // Rotate to align with celestial equator (tilted around X axis)
+            line.rotation.x = THREE.MathUtils.degToRad(EQUATORIAL_TILT);
+            
+            celestialSphereGroup.add(line);
+
+            // Add Celestial Poles (NCP/SCP)
+            const poleDist = CELESTIAL_SPHERE_RADIUS;
+            const ncp = new THREE.Vector3(0, poleDist, 0).applyAxisAngle(new THREE.Vector3(1,0,0), THREE.MathUtils.degToRad(EQUATORIAL_TILT));
+            const scp = new THREE.Vector3(0, -poleDist, 0).applyAxisAngle(new THREE.Vector3(1,0,0), THREE.MathUtils.degToRad(EQUATORIAL_TILT));
+
+            const ncpLabel = createLabel("North Celestial Pole", ncp.x, ncp.y, ncp.z, "pole-label");
+            celestialSphereGroup.add(ncpLabel);
+            
+            const scpLabel = createLabel("South Celestial Pole", scp.x, scp.y, scp.z, "pole-label");
+            celestialSphereGroup.add(scpLabel);
+
+            celestialSphereGroup.visible = true; 
+        }
+
+        function createEarth() {
+            // Simple Earth at Center
+            const geometry = new THREE.SphereGeometry(10, 32, 32);
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x2233ff,
+                emissive: 0x112244,
+                specular: 0x111111,
+                shininess: 30
+            });
+            const earth = new THREE.Mesh(geometry, material);
+            earth.userData = { name: 'Earth', info: 'The center of our perspective (Geocentric)' };
+            planetGroup.add(earth);
+            planetMeshes.push(earth);
+            
+            // Earth Axis Line
+            const axisGeo = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, -CELESTIAL_SPHERE_RADIUS, 0), new THREE.Vector3(0, CELESTIAL_SPHERE_RADIUS, 0)
+            ]);
+            const axisMat = new THREE.LineBasicMaterial({ color: 0xaaaaaa });
+            const axis = new THREE.Line(axisGeo, axisMat);
+            
+            // Apply the same tilt as the Celestial Sphere/Equator
+            axis.rotation.x = THREE.MathUtils.degToRad(EQUATORIAL_TILT); 
+            
+            planetGroup.add(axis);
+        }
+
+        function createEcliptic() {
+            // 1. Ecliptic (Cyan) - XZ plane
+            const eclipticMaterial = new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 2, transparent: true, opacity: 0.8 });
+            const eclipticPoints = [];
+            for (let i = 0; i <= 360; i++) {
+                const rad = THREE.MathUtils.degToRad(i);
+                eclipticPoints.push(new THREE.Vector3(Math.cos(rad) * ECLIPTIC_RADIUS, 0, Math.sin(rad) * ECLIPTIC_RADIUS));
+            }
+            const eclipticGeometry = new THREE.BufferGeometry().setFromPoints(eclipticPoints);
+            const eclipticLine = new THREE.Line(eclipticGeometry, eclipticMaterial);
+            eclipticLine.name = "Ecliptic";
+            eclipticGroup.add(eclipticLine);
+
+            // Ecliptic Label
+            const eclipticLabel = createLabel("Ecliptic", ECLIPTIC_RADIUS + 5, 0, 0, "ecliptic-label");
+            eclipticGroup.add(eclipticLabel);
+            
+            // 2. Celestial Equator (Green) - Tilted
+            const equatorMaterial = new THREE.LineBasicMaterial({ color: 0x44ff88, linewidth: 2, transparent: true, opacity: 0.5 });
+            const equatorPoints = [];
+            for (let i = 0; i <= 360; i++) {
+                const rad = THREE.MathUtils.degToRad(i);
+                equatorPoints.push(new THREE.Vector3(Math.cos(rad) * ECLIPTIC_RADIUS, 0, Math.sin(rad) * ECLIPTIC_RADIUS));
+            }
+            const equatorGeometry = new THREE.BufferGeometry().setFromPoints(equatorPoints);
+            const equatorLine = new THREE.Line(equatorGeometry, equatorMaterial);
+            
+            equatorLine.rotation.x = THREE.MathUtils.degToRad(EQUATORIAL_TILT); 
+            equatorLine.name = "Celestial Equator";
+            eclipticGroup.add(equatorLine);
+            
+            // Equator Label
+            const equatorLabelPos = new THREE.Vector3(0, 0, -ECLIPTIC_RADIUS - 5).applyAxisAngle(new THREE.Vector3(1,0,0), THREE.MathUtils.degToRad(EQUATORIAL_TILT));
+            const equatorLabel = createLabel("Celestial Equator", equatorLabelPos.x, equatorLabelPos.y, equatorLabelPos.z, "equator-label");
+            eclipticGroup.add(equatorLabel);
+        }
+
+        function createZodiacBelt() {
+             const width = THREE.MathUtils.degToRad(9);
+             const thetaStart = (Math.PI / 2) - width;
+             const thetaLength = width * 2;
+             
+             const geometry = new THREE.SphereGeometry(ECLIPTIC_RADIUS, 64, 16, 0, Math.PI * 2, thetaStart, thetaLength);
+             const material = new THREE.MeshBasicMaterial({
+                 color: 0xffaa00, // Gold/Orangeish
+                 side: THREE.DoubleSide,
+                 transparent: true,
+                 opacity: 0.15,
+                 depthWrite: false // Helps with transparency sorting
+             });
+             
+             const belt = new THREE.Mesh(geometry, material);
+             belt.name = "Zodiac Belt";
+             belt.userData = { name: "Zodiac Belt", info: "<br>The band of sky ±9° from the Ecliptic where planets are found." };
+             
+             zodiacBeltGroup.add(belt);
+        }
+
+        function createEquinoxes() {
+            // Vernal Equinox (Spring) at 0 deg (Positive X axis)
+            const vernalPos = new THREE.Vector3(ECLIPTIC_RADIUS, 0, 0);
+            const vernalMarker = new THREE.Mesh(new THREE.SphereGeometry(1.5, 16, 16), new THREE.MeshBasicMaterial({color: 0xff00ff}));
+            vernalMarker.position.copy(vernalPos);
+            equinoxGroup.add(vernalMarker);
+            
+            const vernalLabel = createLabel("Vernal Equinox<br>(0° Aries / 0° Ashwini)", vernalPos.x + 20, 5, 0, "equinox-label");
+            equinoxGroup.add(vernalLabel);
+
+            // Autumnal Equinox (Fall) at 180 deg (Negative X axis)
+            const autumnPos = new THREE.Vector3(-ECLIPTIC_RADIUS, 0, 0);
+            const autumnMarker = new THREE.Mesh(new THREE.SphereGeometry(1.5, 16, 16), new THREE.MeshBasicMaterial({color: 0xff00ff}));
+            autumnMarker.position.copy(autumnPos);
+            equinoxGroup.add(autumnMarker);
+
+            const autumnLabel = createLabel("Autumn Equinox<br>(0° Libra)", autumnPos.x - 20, 5, 0, "equinox-label");
+            equinoxGroup.add(autumnLabel);
+
+            // --- NEW: Zero-Degree Reference Line ---
+            // This draws a white line from Earth out past the Nakshatras at exactly 0 degrees
+            // proving that Aries and Ashwini start at the same point.
+            const lineGeo = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(10, 0, 0), // Start at Earth surface
+                new THREE.Vector3(NAKSHATRA_OUTER_RADIUS + 10, 0, 0) // End outside Nakshatras
+            ]);
+            const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
+            const zeroLine = new THREE.Line(lineGeo, lineMat);
+            equinoxGroup.add(zeroLine);
+        }
+
+        function createPlanets() {
+            PLANET_DATA.forEach(planet => {
+                // Group for the planet to handle rotation
+                const pGroup = new THREE.Group();
+                
+                // Create Planet Mesh
+                const geometry = new THREE.SphereGeometry(planet.size, 24, 24);
+                const material = new THREE.MeshPhongMaterial({ color: planet.color, shininess: 10 });
+                const mesh = new THREE.Mesh(geometry, material);
+                
+                // Position on Ecliptic (Radius ~100)
+                mesh.position.set(ECLIPTIC_RADIUS, 0, 0);
+                
+                // Add Ring for Saturn
+                if (planet.ring) {
+                    const ringGeo = new THREE.RingGeometry(planet.size + 1, planet.size + 3, 32);
+                    const ringMat = new THREE.MeshBasicMaterial({ color: 0xAA8866, side: THREE.DoubleSide, transparent: true, opacity: 0.7 });
+                    const ring = new THREE.Mesh(ringGeo, ringMat);
+                    ring.rotation.x = Math.PI / 2;
+                    mesh.add(ring);
+                }
+
+                mesh.userData = { name: planet.name, info: '<br>' + planet.info };
+                planetMeshes.push(mesh);
+
+                // Add label
+                const label = createLabel(planet.name, 0, planet.size + 2, 0, "planet-label");
+                mesh.add(label);
+
+                pGroup.add(mesh);
+                
+                // Initial Angle
+                pGroup.rotation.y = THREE.MathUtils.degToRad(planet.angle);
+                
+                // Store speed for animation
+                pGroup.userData = { speed: planet.speed };
+
+                planetGroup.add(pGroup);
+            });
+        }
+
+        // NEW: Visual Marker for Sidereal Start
+        function createSiderealMarker() {
+            // Red dashed line indicating 0° Sidereal Aries
+            const lineGeo = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(ECLIPTIC_RADIUS - 20, 0, 0), 
+                new THREE.Vector3(NAKSHATRA_OUTER_RADIUS + 20, 0, 0)
+            ]);
+            const lineMat = new THREE.LineDashedMaterial({ color: 0xff4444, dashSize: 3, gapSize: 2 });
+            const line = new THREE.Line(lineGeo, lineMat);
+            line.computeLineDistances();
+            
+            const label = createLabel("0° Sidereal Aries", NAKSHATRA_OUTER_RADIUS + 25, 0, 0, "sidereal-label");
+            
+            ayanamsaGroup.add(line);
+            ayanamsaGroup.add(label);
+        }
+
+        function createRasis() {
+            const rasiColors = [0xFF4500, 0xDAA520, 0xFFFF00, 0x008000, 0xFF0000, 0x8A2BE2, 0x0000FF, 0x8B0000, 0x9400D3, 0x483D8B, 0x00BFFF, 0x00FF00];
+            
+            for (let i = 0; i < 12; i++) {
+                const data = RASI_DATA[i];
+                const startRad = THREE.MathUtils.degToRad(i * 30);
+                const lengthRad = THREE.MathUtils.degToRad(30);
+
+                // Sector Mesh
+                const geometry = new THREE.RingGeometry(RASI_INNER_RADIUS, RASI_OUTER_RADIUS, 32, 1, startRad, lengthRad);
+                const material = new THREE.MeshBasicMaterial({ color: rasiColors[i], side: THREE.DoubleSide, transparent: true, opacity: 0.2 });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.rotation.x = -Math.PI / 2;
+                mesh.userData = { type: 'Rāśi', name: `${data.id} (${data.name})`, info: `Degrees: ${data.deg}<br>Symbol: ${data.symbol}` };
+                
+                rasiGroup.add(mesh);
+                rasiMeshes.push(mesh);
+
+                // Labels & Figurines
+                const midAngleRad = startRad + lengthRad / 2;
+                
+                const midRadius = (RASI_INNER_RADIUS + RASI_OUTER_RADIUS) / 2;
+                const labelRadius = midRadius + 4; // Slightly outward in the band
+                const figRadius = midRadius - 4;   // Slightly inward in the band
+                
+                const labelX = Math.cos(midAngleRad) * labelRadius;
+                const labelZ = Math.sin(midAngleRad) * labelRadius;
+                const figX = Math.cos(midAngleRad) * figRadius;
+                const figZ = Math.sin(midAngleRad) * figRadius;
+
+                const rasiLabel = createLabel(`${data.id}\n(${data.name})`, labelX, 0, labelZ, "rasi-label");
+                rasiLabelGroup.add(rasiLabel); 
+                
+                const figurineLabel = createLabel(data.figurine, figX, 0, figZ, "rasi-figurine-label");
+                rasiFigurineGroup.add(figurineLabel); 
+            }
+        }
+
+        function createNakshatras() {
+            for (let i = 0; i < 27; i++) {
+                const data = NAKSHATRA_DATA[i]; 
+                const startRad = THREE.MathUtils.degToRad(i * NAKSHATRA_DEG);
+                const lengthRad = THREE.MathUtils.degToRad(NAKSHATRA_DEG);
+
+                const geometry = new THREE.RingGeometry(NAKSHATRA_INNER_RADIUS, NAKSHATRA_OUTER_RADIUS, 16, 1, startRad, lengthRad);
+                const material = new THREE.MeshBasicMaterial({ color: (i % 2 === 0) ? 0x90caf9 : 0xbbdefb, side: THREE.DoubleSide, transparent: true, opacity: 0.3 });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.rotation.x = -Math.PI / 2;
+                const degStart = (i * NAKSHATRA_DEG).toFixed(2);
+                const degEnd = ((i + 1) * NAKSHATRA_DEG).toFixed(2);
+                mesh.userData = { type: 'Nakṣatra', name: `${i+1}. ${data.id}`, info: `Ruler: ${data.ruler}<br>Symbol: ${data.symbol}<br>Degrees: ${degStart}° - ${degEnd}°` };
+                
+                nakshatraGroup.add(mesh);
+                nakshatraMeshes.push(mesh); 
+
+                const midAngleRad = startRad + lengthRad / 2;
+                
+                const labelRadius = (NAKSHATRA_INNER_RADIUS + NAKSHATRA_OUTER_RADIUS) / 2;
+                
+                const labelX = Math.cos(midAngleRad) * labelRadius;
+                const labelZ = Math.sin(midAngleRad) * labelRadius;
+
+                const nakshatraLabel = createLabel(`${i+1}. ${data.id}\n(${data.ruler})`, labelX, 0, labelZ, "nakshatra-label");
+                nakshatraLabelGroup.add(nakshatraLabel); 
+            }
+        }
+
+        function createNakshatraStars() {
+            const starMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1 });
+            const fiducialMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00, emissive: 0xffff00, emissiveIntensity: 1 }); // Yellow for Spica
+            
+            STAR_DATA.forEach(star => {
+                const angleRad = THREE.MathUtils.degToRad(star.long);
+                const x = Math.cos(angleRad) * STAR_SPHERE_RADIUS;
+                const z = Math.sin(angleRad) * STAR_SPHERE_RADIUS;
+                const y = 0; 
+
+                // Use special material/size for Spica
+                const geometry = new THREE.SphereGeometry(star.isFiducial ? 3 : 1.5, 16, 16); 
+                const starMesh = new THREE.Mesh(geometry, star.isFiducial ? fiducialMaterial.clone() : starMaterial.clone());
+                starMesh.position.set(x, y, z);
+                starMesh.name = star.name; 
+                starMesh.userData = { type: 'Star', name: star.name, info: star.info };
+                starMeshGroup.add(starMesh);
+                
+                const starLabel = createLabel(star.name, x, y + 8, z, "star-label");
+                starLabel.name = `${star.name} Label`; 
+                starLabelGroup.add(starLabel);
+
+                // If Fiducial (Spica), draw a reference line to the zodiac
+                if (star.isFiducial) {
+                    const lineGeo = new THREE.BufferGeometry().setFromPoints([
+                        new THREE.Vector3(x, y, z), // Star position
+                        new THREE.Vector3(Math.cos(angleRad) * RASI_INNER_RADIUS, 0, Math.sin(angleRad) * RASI_INNER_RADIUS) // Inner Rasi ring
+                    ]);
+                    const lineMat = new THREE.LineDashedMaterial({ color: 0xffff00, dashSize: 5, gapSize: 5, opacity: 0.5, transparent: true });
+                    const line = new THREE.Line(lineGeo, lineMat);
+                    line.computeLineDistances();
+                    starMeshGroup.add(line);
+                }
+            });
+        }
+        
+        function createLabel(text, x, y, z, cssClass = 'label') {
+            const div = document.createElement('div');
+            div.className = cssClass;
+            div.innerHTML = text.replace('\n', '<br>');
+            const label = new THREE.CSS2DObject(div);
+            label.position.set(x, y, z);
+            return label;
+        }
+
+        // --- UI & Event Logic ---
+
+        function setupUI() {
+            const toggleEcliptic = document.getElementById('toggleEcliptic');
+            const toggleEquinoxes = document.getElementById('toggleEquinoxes');
+            const toggleEarth = document.getElementById('toggleEarth');
+            const togglePlanets = document.getElementById('togglePlanets');
+            const toggleRasis = document.getElementById('toggleRasis');
+            const toggleNakshatras = document.getElementById('toggleNakshatras');
+            const toggleStarLabels = document.getElementById('toggleStarLabels');
+            const toggleCelestialSphere = document.getElementById('toggleCelestialSphere');
+            const toggleZodiacBelt = document.getElementById('toggleZodiacBelt');
+            const toggleLearningMode = document.getElementById('toggleLearningMode');
+            
+            // NEW: Ayanamsa Slider
+            const ayanamsaSlider = document.getElementById('ayanamsaSlider');
+            const ayanamsaValue = document.getElementById('ayanamsaValue');
+
+            function updateAyanamsa() {
+                const val = parseFloat(ayanamsaSlider.value);
+                ayanamsaValue.innerText = val;
+                // Rotate the whole Sidereal group relative to the Tropical Frame (Scene)
+                // Positive rotation around Y (counter-clockwise) moves the 0-point of the ring
+                // 'left' relative to the fixed Equinox.
+                ayanamsaGroup.rotation.y = THREE.MathUtils.degToRad(val);
+            }
+
+            ayanamsaSlider.addEventListener('input', updateAyanamsa);
+
+            function updateVisibility() {
+                const showEcliptic = toggleEcliptic.checked;
+                const showEquinoxes = toggleEquinoxes.checked;
+                const showEarth = toggleEarth.checked;
+                const showPlanets = togglePlanets.checked;
+                const showRasis = toggleRasis.checked;
+                const showNakshatras = toggleNakshatras.checked;
+                const showStarLabels = toggleStarLabels.checked;
+                const showCelestialSphere = toggleCelestialSphere.checked;
+                const showZodiacBelt = toggleZodiacBelt.checked;
+                const showLearningMode = toggleLearningMode.checked;
+
+                // Celestial Sphere
+                celestialSphereGroup.visible = showCelestialSphere;
+                
+                // Zodiac Belt
+                zodiacBeltGroup.visible = showZodiacBelt;
+
+                // Ecliptic
+                eclipticGroup.visible = showEcliptic;
+                
+                // Equinoxes
+                equinoxGroup.visible = showEquinoxes;
+                equinoxGroup.children.forEach(child => {
+                    if (child.isCSS2DObject) child.visible = showEquinoxes;
+                });
+
+                // Earth & Planets
+                planetGroup.visible = true; 
+                
+                planetGroup.children.forEach(child => {
+                    // Earth Mesh and Axis Line
+                    if (child.userData.name === 'Earth' || child.type === 'Line') {
+                        child.visible = showEarth;
+                    } 
+                    // Planets are stored as Groups containing the mesh and label
+                    else if (child.type === 'Group') {
+                        child.visible = showPlanets;
+                        // Ensure internal labels match parent planet visibility
+                        child.traverse(grandchild => {
+                            if (grandchild.isCSS2DObject) {
+                                grandchild.visible = showPlanets;
+                            }
+                        });
+                    }
+                });
+
+                // Rasis
+                rasiGroup.visible = showRasis;
+                rasiFigurineGroup.children.forEach(label => label.visible = showRasis);
+                rasiLabelGroup.children.forEach(label => label.visible = showRasis);
+
+                // Nakshatras
+                nakshatraGroup.visible = showNakshatras;
+                nakshatraLabelGroup.children.forEach(label => label.visible = showNakshatras);
+
+                // Stars
+                starLabelGroup.children.forEach(label => label.visible = showStarLabels);
+                
+                // Learning Mode
+                document.getElementById('learning-panel').style.display = showLearningMode ? 'block' : 'none';
+            }
+
+            toggleEcliptic.addEventListener('change', updateVisibility);
+            toggleEquinoxes.addEventListener('change', updateVisibility);
+            toggleEarth.addEventListener('change', updateVisibility);
+            togglePlanets.addEventListener('change', updateVisibility);
+            toggleRasis.addEventListener('change', updateVisibility);
+            toggleNakshatras.addEventListener('change', updateVisibility);
+            toggleStarLabels.addEventListener('change', updateVisibility);
+            toggleCelestialSphere.addEventListener('change', updateVisibility);
+            toggleZodiacBelt.addEventListener('change', updateVisibility);
+            toggleLearningMode.addEventListener('change', updateVisibility);
+
+            updateVisibility();
+            updateAyanamsa(); // Set initial rotation
+        }
+
+        function runTests() {
+            console.log("--- Running Vedic Visualizer Tests ---");
+            // Reuse existing logic or add new if needed.
+            testRasiDivision();
+            testNakshatraDivision();
+            testOrdering();
+            testStarPlacement();
+            console.log("--- Tests Complete ---");
+        }
+
+        function testRasiDivision() {
+            const sectors = rasiGroup.children.filter(c => c.type === 'Mesh');
+            const correctCount = sectors.length === 12;
+            const totalDeg = 12 * 30;
+            const correctTotal = totalDeg === 360;
+            if (correctCount && correctTotal) {
+                console.log("PASS: testRasiDivision - 12 sectors of 30° created.");
+            } else {
+                console.error("FAIL: testRasiDivision", { count: sectors.length, total: totalDeg });
+            }
+        }
+
+        function testNakshatraDivision() {
+            const sectors = nakshatraGroup.children.filter(c => c.type === 'Mesh');
+            const correctCount = sectors.length === 27;
+            const totalDeg = 27 * NAKSHATRA_DEG;
+            // Use a tolerance for floating point math
+            const correctTotal = Math.abs(totalDeg - 360) < 0.001;
+            if (correctCount && correctTotal) {
+                console.log("PASS: testNakshatraDivision - 27 sectors of 13°20' created.");
+            } else {
+                console.error("FAIL: testNakshatraDivision", { count: sectors.length, total: totalDeg });
+            }
+        }
+
+        function testOrdering() {
+            const firstRasi = rasiMeshes[0].userData.name.includes("Mesha");
+            const firstNakshatra = nakshatraMeshes[0].userData.name.includes("Ashwini");
+            if (firstRasi && firstNakshatra) {
+                console.log("PASS: testOrdering - Mesha and Ashwini are first.");
+            } else {
+                console.error("FAIL: testOrdering", { rasi: firstRasi, nakshatra: firstNakshatra });
+            }
+        }
+
+        function testStarPlacement() {
+            const starCount = starMeshGroup.children.length;
+            const correctCount = starCount >= 5;
+            const aldebaran = starMeshGroup.getObjectByName("Aldebaran (Rohini)");
+            const pleiades = starMeshGroup.getObjectByName("Pleiades (Krittika)");
+            const regulus = starMeshGroup.getObjectByName("Regulus (Magha)");
+            const spica = starMeshGroup.getObjectByName("Spica (Chitra)");
+            const antares = starMeshGroup.getObjectByName("Antares (Jyeshtha)");
+            
+            if (correctCount && aldebaran && pleiades && regulus && spica && antares) {
+                console.log(`PASS: testStarPlacement - ${starCount} stars found, including all 5 required.`);
+            } else {
+                console.error("FAIL: testStarPlacement - Missing required stars.", { count: starCount, found: {aldebaran, pleiades, regulus, spica, antares} });
+            }
+        }
+
+        // --- Event Handlers ---
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onDocumentMouseMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            lastMouseEvent = event; 
+            controls.autoRotate = false;
+        }
+
+        function onDocumentMouseOut() {
+            // tooltip logic removed
+        }
+        
+        // --- Animation Loop ---
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+
+            // Get speed from slider
+            const speedSlider = document.getElementById('speedSlider');
+            const speedFactor = speedSlider ? parseFloat(speedSlider.value) : 1.0;
+
+            // Rotate starfield inside its group
+            if (starfield) starfield.rotation.y += 0.00005;
+            
+            // Animate Planets
+            planetGroup.children.forEach(child => {
+                // Only animate the Groups (Planets), not Earth (Mesh)
+                if (child.type === 'Group' && child.userData.speed) {
+                    child.rotation.y += child.userData.speed * speedFactor; // Orbit movement with speed factor
+                }
+            });
+
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+
+    </script>
+</body>
+</html>

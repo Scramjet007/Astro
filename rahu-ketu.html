@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rahu & Ketu: The Nodes (Corrected)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e27;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #ui-overlay > * {
+            pointer-events: auto;
+        }
+
+        .ui-panel {
+            background: rgba(15, 20, 40, 0.9);
+            border: 1px solid rgba(100, 150, 255, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        #title-panel {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+
+        #title-panel h1 {
+            font-size: 28px;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            margin-bottom: 5px;
+        }
+
+        #title-panel p {
+            font-size: 14px;
+            color: #a0b0d0;
+        }
+
+        #controls-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 220px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group h3 {
+            font-size: 12px;
+            color: #ffd700;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+            width: 100%;
+            margin-bottom: 6px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.active {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .slider-container {
+            margin: 10px 0;
+        }
+
+        .slider-container label {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: #a0b0d0;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: rgba(100, 150, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #667eea;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #667eea;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .checkbox-item label {
+            font-size: 12px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        #info-panel {
+            position: absolute;
+            left: 20px;
+            bottom: 20px;
+            width: 250px;
+            font-size: 13px;
+            line-height: 1.4;
+            color: #ccc;
+        }
+        
+        #info-panel h3 {
+            color: #ffd700;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #445;
+            padding-bottom: 5px;
+        }
+
+        .highlight {
+            color: #fff;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            #controls-panel {
+                width: 200px;
+                bottom: 10px;
+                right: 10px;
+            }
+            #info-panel {
+                display: none;
+            }
+            #title-panel h1 {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div id="ui-overlay">
+        <div id="title-panel" class="ui-panel">
+            <h1>Rahu & Ketu: The Lunar Nodes</h1>
+            <p>Interactive 3D Visualization of Celestial Mechanics</p>
+        </div>
+
+        <div id="info-panel" class="ui-panel">
+            <h3>About the Nodes</h3>
+            <p><span class="highlight">Rahu (☊)</span> and <span class="highlight">Ketu (☋)</span> are the intersection points of the Moon's orbit and the Ecliptic.</p>
+            <br>
+            <p><span class="highlight" style="color: #ff6600">Rahu (Ascending):</span> Moon crosses Ecliptic from South to North.</p>
+            <p><span class="highlight" style="color: #00ffff">Ketu (Descending):</span> Moon crosses Ecliptic from North to South.</p>
+            <br>
+            <p>The nodes move <span class="highlight">retrograde</span> (clockwise) along the ecliptic plane.</p>
+        </div>
+
+        <div id="controls-panel" class="ui-panel">
+            <div class="control-group">
+                <h3>View Mode</h3>
+                <button id="btn-view-toggle">View: Geocentric</button>
+            </div>
+
+            <div class="control-group">
+                <h3>Animation</h3>
+                <button id="btn-play-pause">⏸ Pause</button>
+                <button id="btn-reset">↻ Reset</button>
+                <div class="slider-container">
+                    <label>Animation Speed: <span id="speed-value">1.0x</span></label>
+                    <input type="range" id="slider-speed" min="0.1" max="5" step="0.1" value="1">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Display Options</h3>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="chk-labels" checked>
+                        <label for="chk-labels">Show Labels</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="chk-ecliptic" checked>
+                        <label for="chk-ecliptic">Show Ecliptic Plane</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="chk-lunar" checked>
+                        <label for="chk-lunar">Show Lunar Plane</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="chk-zodiac" checked>
+                        <label for="chk-zodiac">Show Zodiac Ring</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // ==================== GLOBAL STATE ====================
+        let scene, camera, renderer, orbitControls;
+        let isGeocentric = true;
+        let isAnimating = true;
+        let animationSpeed = 1.0;
+        let time = 0;
+        let labelsVisible = true;
+
+        // STORAGE FOR OBJECTS BY VIEW
+        const geo = {
+            earth: null, sun: null, moon: null,
+            lunarPlane: null, ecliptic: null,
+            rahu: null, ketu: null,
+            labels: { rahu: null, ketu: null, sun: null, moon: null, earth: null }
+        };
+
+        const helio = {
+            earth: null, sun: null, moon: null,
+            lunarPlane: null, ecliptic: null,
+            rahu: null, ketu: null,
+            labels: { rahu: null, ketu: null, sun: null, moon: null, earth: null }
+        };
+
+        let zodiacRing;
+
+        // Scene groups for different views
+        let geocentricGroup, heliocentricGroup;
+
+        // Constants
+        const MOON_ORBITAL_TILT = 15.0 * Math.PI / 180; 
+        const NODAL_PRECESSION_RATE = -0.02; 
+        const MOON_ORBIT_SPEED = 2.0;
+        const YEAR_SPEED = 0.1; 
+
+        const ZODIAC_SIGNS = ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'];
+
+        // ==================== INITIALIZATION ====================
+        function init() {
+            // Create scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0e27);
+
+            // Setup camera
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(20, 20, 20);
+            camera.lookAt(0, 0, 0);
+
+            // Setup renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Setup OrbitControls
+            orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+            orbitControls.enableDamping = true;
+            orbitControls.dampingFactor = 0.05;
+            orbitControls.minDistance = 5;
+            orbitControls.maxDistance = 60;
+
+            // Add lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 10);
+            scene.add(directionalLight);
+
+            // Create scene groups
+            geocentricGroup = new THREE.Group();
+            heliocentricGroup = new THREE.Group();
+            scene.add(geocentricGroup);
+            scene.add(heliocentricGroup);
+
+            // Build both views
+            buildGeocentricView();
+            buildHeliocentricView();
+
+            // Show geocentric by default
+            heliocentricGroup.visible = false;
+
+            // Setup UI
+            setupEventListeners();
+            window.addEventListener('resize', onWindowResize);
+
+            // Start loop
+            animate();
+        }
+
+        // ==================== BUILDERS ====================
+
+        function buildGeocentricView() {
+            // Earth (Center)
+            const earthGeom = new THREE.SphereGeometry(1, 32, 32);
+            const earthMat = new THREE.MeshPhongMaterial({ color: 0x2233ff, emissive: 0x112244 });
+            geo.earth = new THREE.Mesh(earthGeom, earthMat);
+            geocentricGroup.add(geo.earth);
+
+            // Ecliptic Plane
+            const eclipticGeom = new THREE.CircleGeometry(10, 64);
+            const eclipticMat = new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.1, side: THREE.DoubleSide });
+            geo.ecliptic = new THREE.Mesh(eclipticGeom, eclipticMat);
+            geo.ecliptic.rotation.x = Math.PI / 2;
+            geocentricGroup.add(geo.ecliptic);
+            
+            // Ecliptic Ring
+            const eclRing = new THREE.Mesh(new THREE.RingGeometry(9.8, 10, 64), new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.4, side: THREE.DoubleSide }));
+            eclRing.rotation.x = Math.PI / 2;
+            geocentricGroup.add(eclRing);
+
+            // Lunar Plane Group (Rotates Y for Precession)
+            geo.lunarPlane = new THREE.Group();
+            geocentricGroup.add(geo.lunarPlane);
+
+            // Lunar Visual Disk (Tilted X)
+            const lunarMat = new THREE.MeshBasicMaterial({ color: 0x88ccff, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
+            const lunarDisk = new THREE.Mesh(new THREE.CircleGeometry(8, 64), lunarMat);
+            lunarDisk.rotation.x = Math.PI / 2 - MOON_ORBITAL_TILT;
+            geo.lunarPlane.add(lunarDisk);
+
+            // Lunar Ring
+            const lunarRing = new THREE.Mesh(new THREE.RingGeometry(7.8, 8, 64), new THREE.MeshBasicMaterial({ color: 0x88ccff, transparent: true, opacity: 0.5, side: THREE.DoubleSide }));
+            lunarRing.rotation.x = Math.PI / 2 - MOON_ORBITAL_TILT;
+            geo.lunarPlane.add(lunarRing);
+
+            // Sun (Orbits Earth in Geo view)
+            const sunGeom = new THREE.SphereGeometry(0.8, 32, 32);
+            const sunMat = new THREE.MeshBasicMaterial({ color: 0xffff00, emissive: 0xffaa00 });
+            geo.sun = new THREE.Mesh(sunGeom, sunMat);
+            geo.sun.add(new THREE.Mesh(new THREE.SphereGeometry(1.2, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.3 })));
+            geocentricGroup.add(geo.sun);
+
+            // Moon (Child of Lunar Plane)
+            const moonGeom = new THREE.SphereGeometry(0.4, 32, 32);
+            geo.moon = new THREE.Mesh(moonGeom, new THREE.MeshPhongMaterial({ color: 0xcccccc, emissive: 0x333333 }));
+            geo.lunarPlane.add(geo.moon);
+
+            // Zodiac
+            createZodiacRing(geocentricGroup);
+
+            // Markers (Rahu/Ketu)
+            // We add them as invisible objects for calculation
+            geo.rahu = createMarker();
+            geo.ketu = createMarker();
+            geocentricGroup.add(geo.rahu);
+            geocentricGroup.add(geo.ketu);
+
+            // Labels
+            createLabels(geocentricGroup, geo.labels, true);
+        }
+
+        function buildHeliocentricView() {
+            // Sun (Center)
+            const sunGeom = new THREE.SphereGeometry(1.5, 32, 32);
+            helio.sun = new THREE.Mesh(sunGeom, new THREE.MeshBasicMaterial({ color: 0xffff00, emissive: 0xffaa00 }));
+            heliocentricGroup.add(helio.sun);
+
+            // Ecliptic
+            const eclMat = new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.1, side: THREE.DoubleSide });
+            helio.ecliptic = new THREE.Mesh(new THREE.CircleGeometry(12, 64), eclMat);
+            helio.ecliptic.rotation.x = Math.PI / 2;
+            heliocentricGroup.add(helio.ecliptic);
+
+            // Earth (Orbits Sun)
+            helio.earth = new THREE.Mesh(new THREE.SphereGeometry(0.6, 32, 32), new THREE.MeshPhongMaterial({ color: 0x2233ff, emissive: 0x112244 }));
+            heliocentricGroup.add(helio.earth);
+
+            // Lunar Plane (Child of Earth)
+            helio.lunarPlane = new THREE.Group();
+            helio.earth.add(helio.lunarPlane);
+
+            // Visual Disk (Tilted X)
+            const lunarDisk = new THREE.Mesh(new THREE.CircleGeometry(2.5, 64), new THREE.MeshBasicMaterial({ color: 0x88ccff, transparent: true, opacity: 0.2, side: THREE.DoubleSide }));
+            lunarDisk.rotation.x = Math.PI / 2 - MOON_ORBITAL_TILT;
+            helio.lunarPlane.add(lunarDisk);
+
+            // Moon
+            helio.moon = new THREE.Mesh(new THREE.SphereGeometry(0.2, 32, 32), new THREE.MeshPhongMaterial({ color: 0xcccccc, emissive: 0x333333 }));
+            helio.lunarPlane.add(helio.moon);
+
+            // Markers
+            helio.rahu = createMarker();
+            helio.ketu = createMarker();
+            heliocentricGroup.add(helio.rahu);
+            heliocentricGroup.add(helio.ketu);
+
+            createLabels(heliocentricGroup, helio.labels, false);
+        }
+
+        // ==================== HELPERS ====================
+
+        function createMarker() {
+            // Return an invisible Object3D instead of a Mesh
+            return new THREE.Object3D();
+        }
+
+        function createZodiacRing(parent) {
+            zodiacRing = new THREE.Group();
+            const radius = 11;
+            for (let i = 0; i < 12; i++) {
+                const angle = (i * 30) * Math.PI / 180;
+                const x = radius * Math.cos(angle);
+                const z = radius * Math.sin(angle);
+                const sprite = createTextSprite(ZODIAC_SIGNS[i], 24, '#ffd700');
+                sprite.position.set(x, 0, z);
+                zodiacRing.add(sprite);
+            }
+            parent.add(zodiacRing);
+        }
+
+        function createLabels(parent, store, isGeo) {
+            store.rahu = createTextSprite('Rahu ☊', 18, '#ff6600');
+            store.ketu = createTextSprite('Ketu ☋', 18, '#00ffff');
+            
+            if (isGeo) {
+                store.sun = createTextSprite('Sun', 14, '#ffff00');
+                store.moon = createTextSprite('Moon', 14, '#cccccc');
+                store.earth = createTextSprite('Earth', 14, '#2233ff');
+            } else {
+                store.sun = createTextSprite('Sun', 16, '#ffff00');
+                store.earth = createTextSprite('Earth', 14, '#2233ff');
+                store.moon = createTextSprite('Moon', 12, '#cccccc');
+            }
+            parent.add(store.rahu, store.ketu, store.sun, store.moon, store.earth);
+        }
+
+        function createTextSprite(text, fontSize, color) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 64;
+            context.font = `bold ${fontSize}px Arial`;
+            context.fillStyle = color;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(text, 128, 32);
+            const texture = new THREE.Texture(canvas);
+            texture.needsUpdate = true;
+            const spriteMat = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(spriteMat);
+            sprite.scale.set(2, 0.5, 1);
+            return sprite;
+        }
+
+        // ==================== UPDATE LOGIC ====================
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (isAnimating) {
+                time += 0.01 * animationSpeed;
+                if (isGeocentric) {
+                    updateGeocentricView();
+                } else {
+                    updateHeliocentricView();
+                }
+            }
+            
+            orbitControls.update();
+            renderer.render(scene, camera);
+        }
+
+        function updateGeocentricView() {
+            const objs = geo;
+
+            // Sun Motion
+            const sunAngle = time * YEAR_SPEED;
+            objs.sun.position.set(
+                10 * Math.cos(sunAngle + Math.PI), 
+                0, 
+                10 * Math.sin(sunAngle + Math.PI)
+            );
+            
+            // Precession
+            const precessionAngle = time * NODAL_PRECESSION_RATE;
+            objs.lunarPlane.rotation.y = precessionAngle;
+            
+            // Moon Motion
+            const moonAngle = time * MOON_ORBIT_SPEED;
+            const moonRadius = 8;
+            const localX = moonRadius * Math.cos(moonAngle);
+            const localZ_flat = moonRadius * Math.sin(moonAngle);
+            
+            objs.moon.position.set(
+                localX,
+                localZ_flat * Math.sin(MOON_ORBITAL_TILT),
+                localZ_flat * Math.cos(MOON_ORBITAL_TILT)
+            );
+
+            // Update Node Markers (Invisible objects)
+            const nodeRadius = 8;
+            const rahuPos = new THREE.Vector3(nodeRadius, 0, 0);
+            rahuPos.applyAxisAngle(new THREE.Vector3(0, 1, 0), precessionAngle);
+            
+            objs.rahu.position.copy(rahuPos);
+            objs.ketu.position.copy(rahuPos).negate();
+            
+            updateLabelPositions(objs, true);
+        }
+
+        function updateHeliocentricView() {
+            const objs = helio;
+
+            // Earth Motion
+            const earthAngle = time * YEAR_SPEED;
+            objs.earth.position.set(10 * Math.cos(earthAngle), 0, 10 * Math.sin(earthAngle));
+            
+            // Precession
+            const precessionAngle = time * NODAL_PRECESSION_RATE;
+            objs.lunarPlane.rotation.y = precessionAngle;
+            
+            // Moon Motion
+            const moonAngle = time * MOON_ORBIT_SPEED;
+            const moonRadius = 2.5;
+            const localX = moonRadius * Math.cos(moonAngle);
+            const localZ_flat = moonRadius * Math.sin(moonAngle);
+            
+            objs.moon.position.set(
+                localX,
+                localZ_flat * Math.sin(MOON_ORBITAL_TILT),
+                localZ_flat * Math.cos(MOON_ORBITAL_TILT)
+            );
+            
+            // Update Node Markers (Invisible objects)
+            const earthPos = new THREE.Vector3();
+            objs.earth.getWorldPosition(earthPos);
+            
+            const nodeRadius = 2.5;
+            const localNodeVec = new THREE.Vector3(nodeRadius, 0, 0);
+            localNodeVec.applyAxisAngle(new THREE.Vector3(0, 1, 0), precessionAngle);
+            
+            objs.rahu.position.copy(earthPos).add(localNodeVec);
+            objs.ketu.position.copy(earthPos).sub(localNodeVec);
+            
+            updateLabelPositions(objs, false);
+        }
+
+        function updateLabelPositions(store, isGeo) {
+            if (isGeo) {
+                store.labels.sun.position.copy(store.sun.position).add(new THREE.Vector3(0, 1.5, 0));
+                
+                const moonWorld = new THREE.Vector3();
+                store.moon.getWorldPosition(moonWorld);
+                store.labels.moon.position.copy(moonWorld).add(new THREE.Vector3(0, 1, 0));
+                
+                store.labels.earth.position.set(0, 2, 0);
+            } else {
+                store.labels.sun.position.set(0, 3, 0);
+                
+                const earthWorld = new THREE.Vector3();
+                store.earth.getWorldPosition(earthWorld);
+                store.labels.earth.position.copy(earthWorld).add(new THREE.Vector3(0, 1.5, 0));
+                
+                const moonWorld = new THREE.Vector3();
+                store.moon.getWorldPosition(moonWorld);
+                store.labels.moon.position.copy(moonWorld).add(new THREE.Vector3(0, 0.8, 0));
+            }
+            
+            // store.rahu and store.ketu are now just invisible points
+            // We move the LABELS to these points
+            store.labels.rahu.position.copy(store.rahu.position).add(new THREE.Vector3(0, 1, 0));
+            store.labels.ketu.position.copy(store.ketu.position).add(new THREE.Vector3(0, 1, 0));
+        }
+
+        // ==================== EVENTS ====================
+
+        function setupEventListeners() {
+            document.getElementById('btn-view-toggle').addEventListener('click', () => {
+                isGeocentric = !isGeocentric;
+                geocentricGroup.visible = isGeocentric;
+                heliocentricGroup.visible = !isGeocentric;
+                document.getElementById('btn-view-toggle').textContent = isGeocentric ? 'View: Geocentric' : 'View: Heliocentric';
+            });
+            
+            document.getElementById('btn-play-pause').addEventListener('click', () => {
+                isAnimating = !isAnimating;
+                document.getElementById('btn-play-pause').textContent = isAnimating ? '⏸ Pause' : '▶ Play';
+            });
+            
+            document.getElementById('btn-reset').addEventListener('click', () => time = 0);
+            
+            document.getElementById('slider-speed').addEventListener('input', (e) => {
+                animationSpeed = parseFloat(e.target.value);
+                document.getElementById('speed-value').textContent = animationSpeed.toFixed(1) + 'x';
+            });
+            
+            document.getElementById('chk-labels').addEventListener('change', (e) => {
+                const v = e.target.checked;
+                labelsVisible = v;
+                // Apply to all labels
+                Object.values(geo.labels).forEach(l => { if(l) l.visible = v; });
+                Object.values(helio.labels).forEach(l => { if(l) l.visible = v; });
+            });
+            
+            document.getElementById('chk-ecliptic').addEventListener('change', (e) => {
+                if(geo.ecliptic) geo.ecliptic.visible = e.target.checked;
+                if(helio.ecliptic) helio.ecliptic.visible = e.target.checked;
+            });
+            
+            document.getElementById('chk-lunar').addEventListener('change', (e) => {
+                if(geo.lunarPlane) geo.lunarPlane.visible = e.target.checked;
+                if(helio.lunarPlane) helio.lunarPlane.visible = e.target.checked;
+            });
+            
+            document.getElementById('chk-zodiac').addEventListener('change', (e) => {
+                if (zodiacRing) zodiacRing.visible = e.target.checked;
+            });
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        init();
+    </script>
+</body>
+</html>
